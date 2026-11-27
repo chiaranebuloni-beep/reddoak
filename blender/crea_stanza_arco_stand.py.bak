@@ -1,0 +1,1202 @@
+"""
+Crea da zero "Il quartier generale", il grande salone della sede Reddoak
+(vista frontale: i 5 progetti ad arco davanti a chi entra), in versione FOTOGRAFICA (materiali, arredi e cielo veri) e la salva in
+blender/stanza.blend.
+
+    npm run stanza:crea
+
+Prima servono, una volta sola:
+    python3 blender/scarica_risorse.py     (cielo, materiali e arredi da Poly Haven)
+    node blender/cattura_schermate.mjs     (foto dei siti veri dei progetti)
+    node blender/crea_schermi.mjs          (contenuto dei 5 grandi schermi)
+
+ATTENZIONE: riscrive stanza.blend. Dopo aver modificato la stanza a mano in
+Blender NON rilanciare questo script (perderesti le modifiche): usa solo
+"npm run stanza:esporta".
+
+Regole che l'esportazione verso three.js si aspetta (vedi esporta_stanza.py):
+  - la camera a 360 gradi si chiama "Camera360" e sta al centro della stanza
+  - ogni punto cliccabile e' un Empty il cui nome inizia con "HOTSPOT_"
+  - gli oggetti con la proprieta' "solo_foto" (gli alberi, pesantissimi) finiscono
+    nella foto a 360 gradi ma non nel modello del "3D dal vivo"
+"""
+
+import math
+import os
+import random
+
+import bmesh
+import bpy
+import numpy as np
+from mathutils import Matrix, Vector
+
+QUI = os.path.dirname(os.path.abspath(__file__))
+TEX = os.path.join(QUI, "textures")
+RIS = os.path.join(QUI, "risorse")
+USCITA = os.path.join(QUI, "stanza.blend")
+
+# ---------------------------------------------------------------- misure (metri, tutto in scala reale)
+# Vista frontale: chi guarda sta vicino all'ingresso e ha davanti i 5 progetti disposti ad arco.
+ALTEZZA = 14.0      # altezza del salone: e' questo che lo fa sembrare grande
+OCCHI = 1.6         # altezza della camera
+R_ARCO = 17.5       # distanza del muro di fondo (ad arco) da chi guarda
+R_STAND = 13.0      # distanza del centro di ogni stand da chi guarda
+PASSO = 36.0        # gradi tra uno stand e il successivo: ben distanziati, se ne vedono tre per volta
+DIST_TOTEM = 0.8    # distanza del totem dal muro di fondo
+SCHERMO_L, SCHERMO_H = 4.6, 7.36   # misura di ogni schermo: 4,6 metri per 7,36
+ZOCCOLO = 0.8       # altezza da terra del bordo basso dello schermo (i salottini non lo coprono)
+Z_ROVERE = 9.0      # da qui in su il muro di fondo e' rivestito in rovere, con il logo Reddoak
+FONDO_Y = -7.0      # la parete d'ingresso, alle spalle di chi guarda
+R_LUCERNARIO = 6.0
+VETRO_ALT, SPESSORE_MURO = 12.6, 0.4
+SGUARDO_MAX = 80.0  # sul sito lo sguardo si gira al massimo di tanti gradi a destra e a sinistra
+
+ROSSO_REDDOAK = "#FB0020"
+CIELO = "#C3D4E6"       # sfondo del "3D dal vivo" (nella foto c'e' il cielo vero)
+ROT_CIELO = 180.0       # gira il panorama della citta' attorno alla stanza (gradi)
+LUCE_CIELO = 0.55        # quanto il cielo illumina la stanza
+VISTA_CIELO = 0.8       # quanto e' luminoso il cielo che si vede dalle vetrate
+
+# I 5 progetti, da sinistra a destra come li vede chi entra (quello al centro e' proprio di fronte).
+PROGETTI = [
+    dict(id="meraviglia", nome="meravigliä", colore="#247DFF"),
+    dict(id="mypushop", nome="myPushop", colore="#EB255A"),
+    dict(id="quiz-patente", nome="Quiz Patente", colore="#F39A2E"),
+    dict(id="mister-lavaggio", nome="Mister Lavaggio", colore="#2282C0"),
+    dict(id="relatia", nome="Relatia", colore="#6A3DF0"),
+]
+
+
+# ================================================================ utilita'
+def lin(c):
+    c = c / 255.0
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def colore(hex_):
+    h = hex_.lstrip("#")
+    return (lin(int(h[0:2], 16)), lin(int(h[2:4], 16)), lin(int(h[4:6], 16)), 1.0)
+
+
+def imposta(nodo, nome, valore):
+    if nome in nodo.inputs:
+        nodo.inputs[nome].default_value = valore
+
+
+def carica(percorso, dati=False):
+    """Carica un'immagine dal disco (una volta sola). dati=True per le mappe che non sono colori."""
+    img = bpy.data.images.load(percorso, check_existing=True)
+    if dati:
+        img.colorspace_settings.name = "Non-Color"
+    return img
+
+
+def variante(origine, destinazione, funzione):
+    """Copia modificata di un'immagine (es. l'intonaco schiarito). funzione lavora sui colori 0-1."""
+    im = bpy.data.images.load(origine)
+    w, h = im.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    im.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    px[..., :3] = np.clip(funzione(px[..., :3]), 0, 1)
+    px[..., 3] = 1.0
+    out = bpy.data.images.new("variante", w, h, alpha=False)
+    out.pixels.foreach_set(px.ravel())
+    out.filepath_raw = destinazione
+    out.file_format = "JPEG"
+    out.save()
+    bpy.data.images.remove(out)
+    bpy.data.images.remove(im)
+    return destinazione
+
+
+_materiali = {}
+
+
+def nuovo_materiale(nome):
+    m = bpy.data.materials.new(nome)
+    if m.node_tree is None:
+        m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    out.location = (320, 0)
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(b.outputs["BSDF"], out.inputs["Surface"])
+    return m, nt, b
+
+
+def materiale(nome, hex_, ruvidita=0.5, metallo=0.0, vernice=0.0, luce=0.0):
+    """Materiale a tinta unita (metalli, laccati, luci)."""
+    if nome in _materiali:
+        return _materiali[nome]
+    m, nt, b = nuovo_materiale(nome)
+    rgba = colore(hex_)
+    imposta(b, "Base Color", rgba)
+    imposta(b, "Roughness", ruvidita)
+    imposta(b, "Metallic", metallo)
+    imposta(b, "Coat Weight", vernice)
+    imposta(b, "Coat Roughness", 0.08)
+    if luce > 0:
+        imposta(b, "Emission Color", rgba)
+        imposta(b, "Emission Strength", luce)
+    m.diffuse_color = rgba
+    m.roughness = ruvidita
+    _materiali[nome] = m
+    return m
+
+
+def reale(nome, cartella, ruvidita=1.0, rilievo=1.0, colore_da=None):
+    """Materiale fotografato dal vero (Poly Haven): colore, ruvidita' e rilievo da immagini.
+    Le misure vere arrivano dalle coordinate UV in metri (vedi uv_metri)."""
+    if nome in _materiali:
+        return _materiali[nome]
+    base = os.path.join(RIS, "materiali", cartella)
+    m, nt, b = nuovo_materiale(nome)
+    d = nt.nodes.new("ShaderNodeTexImage")
+    d.location = (-420, 240)
+    d.image = carica(colore_da or os.path.join(base, "diff.jpg"))
+    nt.links.new(d.outputs["Color"], b.inputs["Base Color"])
+    r = nt.nodes.new("ShaderNodeTexImage")
+    r.location = (-420, -40)
+    r.image = carica(os.path.join(base, "rough.jpg"), dati=True)
+    if ruvidita == 1.0:
+        nt.links.new(r.outputs["Color"], b.inputs["Roughness"])
+    else:
+        mol = nt.nodes.new("ShaderNodeMath")
+        mol.operation = "MULTIPLY"
+        mol.use_clamp = True
+        mol.location = (-140, -40)
+        mol.inputs[1].default_value = ruvidita
+        nt.links.new(r.outputs["Color"], mol.inputs[0])
+        nt.links.new(mol.outputs[0], b.inputs["Roughness"])
+    n = nt.nodes.new("ShaderNodeTexImage")
+    n.location = (-420, -320)
+    n.image = carica(os.path.join(base, "nor.jpg"), dati=True)
+    nm = nt.nodes.new("ShaderNodeNormalMap")
+    nm.location = (-140, -320)
+    nm.inputs["Strength"].default_value = rilievo
+    nt.links.new(n.outputs["Color"], nm.inputs["Color"])
+    nt.links.new(nm.outputs["Normal"], b.inputs["Normal"])
+    _materiali[nome] = m
+    return m
+
+
+def materiale_schermo(nome, file_immagine):
+    """Schermo acceso: nero da spento, l'immagine e' la luce che emette."""
+    m, nt, b = nuovo_materiale(nome)
+    imposta(b, "Base Color", (0.004, 0.004, 0.005, 1.0))
+    imposta(b, "Roughness", 0.45)
+    t = nt.nodes.new("ShaderNodeTexImage")
+    t.location = (-340, 0)
+    t.image = carica(os.path.join(TEX, file_immagine))
+    nt.links.new(t.outputs["Color"], b.inputs["Emission Color"])
+    imposta(b, "Emission Strength", 1.0)
+    return m
+
+
+def materiale_logo(nome, file_immagine, luce=1.0):
+    """Logo applicato sul muro: si vede solo dove il PNG non e' trasparente, ed e' retroilluminato."""
+    m, nt, b = nuovo_materiale(nome)
+    t = nt.nodes.new("ShaderNodeTexImage")
+    t.location = (-340, 0)
+    t.image = carica(os.path.join(TEX, file_immagine))
+    nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
+    nt.links.new(t.outputs["Color"], b.inputs["Emission Color"])
+    nt.links.new(t.outputs["Alpha"], b.inputs["Alpha"])
+    imposta(b, "Emission Strength", luce)
+    imposta(b, "Roughness", 0.4)
+    try:
+        m.surface_render_method = "BLENDED"
+    except Exception:
+        pass
+    return m
+
+
+def collezione(nome, madre=None):
+    c = bpy.data.collections.new(nome)
+    (madre or bpy.context.scene.collection).children.link(c)
+    return c
+
+
+def uv_metri(ob, lato=1.0, ruota=False, sposta=(0.0, 0.0)):
+    """Coordinate UV 'a scatola' in metri: lato = quanti metri copre l'immagine del materiale.
+    Sulle facce verticali l'alto dell'immagine va verso l'alto (le venature del legno restano dritte)."""
+    me = ob.data
+    uvl = me.uv_layers.get("UVMap") or me.uv_layers.new(name="UVMap")
+    su = Vector((0, 0, 1))
+    for poly in me.polygons:
+        n = poly.normal
+        t = Vector((1, 0, 0)) if abs(n.z) > 0.9 else su.cross(n).normalized()
+        b = n.cross(t)
+        for li in poly.loop_indices:
+            p = me.vertices[me.loops[li].vertex_index].co
+            u, v = p.dot(t) / lato + sposta[0], p.dot(b) / lato + sposta[1]
+            uvl.data[li].uv = (v, u) if ruota else (u, v)
+    return ob
+
+
+def da_bmesh(nome, bm, mat, coll, ricalcola=True):
+    if ricalcola:
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(nome, me)
+    coll.objects.link(ob)
+    if mat:
+        me.materials.append(mat)
+    return ob
+
+
+def prisma(nome, pianta, z0, z1, mat, coll, liscio=False):
+    """Solido chiuso: una pianta (lista di punti x,y) alzata da z0 a z1."""
+    bm = bmesh.new()
+    giu = [bm.verts.new((p[0], p[1], z0)) for p in pianta]
+    su = [bm.verts.new((p[0], p[1], z1)) for p in pianta]
+    n = len(pianta)
+    bm.faces.new(giu[::-1])
+    bm.faces.new(su)
+    for i in range(n):
+        j = (i + 1) % n
+        f = bm.faces.new((giu[i], giu[j], su[j], su[i]))
+        f.smooth = liscio
+    return da_bmesh(nome, bm, mat, coll)
+
+
+def cerchio(raggio, cx=0.0, cy=0.0, lati=64):
+    return [(cx + raggio * math.cos(2 * math.pi * i / lati),
+             cy + raggio * math.sin(2 * math.pi * i / lati)) for i in range(lati)]
+
+
+def cilindro(nome, raggio, z0, z1, mat, coll, cx=0.0, cy=0.0):
+    return prisma(nome, cerchio(raggio, cx, cy), z0, z1, mat, coll, liscio=True)
+
+
+def sfera(nome, raggio, centro, mat, coll, scala=None):
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=24, radius=raggio)
+    for f in bm.faces:
+        f.smooth = True
+    ob = da_bmesh(nome, bm, mat, coll)
+    ob.location = centro
+    if scala:
+        ob.scale = scala
+    return ob
+
+
+def scatola(nome, dim, centro, mat, coll, smusso=0.0, rot=None):
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= dim[0]
+        v.co.y *= dim[1]
+        v.co.z *= dim[2]
+    ob = da_bmesh(nome, bm, mat, coll)
+    ob.location = centro
+    if rot:
+        ob.rotation_euler = rot
+    if smusso > 0:
+        mod = ob.modifiers.new("Smusso", "BEVEL")
+        mod.width = min(smusso, min(dim) * 0.49)
+        mod.segments = 3
+    return ob
+
+
+def cono(nome, r_base, r_cima, altezza, centro, mat, coll):
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=48,
+                          radius1=r_base, radius2=r_cima, depth=altezza)
+    for f in bm.faces:
+        f.smooth = len(f.verts) == 4
+    ob = da_bmesh(nome, bm, mat, coll)
+    ob.location = centro
+    return ob
+
+
+def tubo(nome, a, b, raggio, mat, coll):
+    """Cilindro tra due punti (cavi, steli)."""
+    a, b = Vector(a), Vector(b)
+    lung = (b - a).length
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=raggio, radius2=raggio, depth=lung)
+    for f in bm.faces:
+        f.smooth = len(f.verts) == 4
+    ob = da_bmesh(nome, bm, mat, coll)
+    ob.location = (a + b) / 2
+    ob.rotation_mode = "QUATERNION"
+    ob.rotation_quaternion = (b - a).to_track_quat("Z", "Y")
+    return ob
+
+
+def vuoto(nome, coll, padre=None, loc=(0, 0, 0), rot=(0, 0, 0), dimensione=0.2):
+    e = bpy.data.objects.new(nome, None)
+    e.empty_display_size = dimensione
+    coll.objects.link(e)
+    e.parent = padre
+    e.location = loc
+    e.rotation_euler = rot
+    return e
+
+
+def piano_orientato(nome, verts, mat, coll, verso, lato=None):
+    """Faccia singola con la normale girata verso il punto 'verso' (serve a three.js)."""
+    bm = bmesh.new()
+    f = bm.faces.new([bm.verts.new(v) for v in verts])
+    bm.normal_update()
+    if f.normal.dot(Vector(verso) - f.calc_center_median()) < 0:
+        f.normal_flip()
+    ob = da_bmesh(nome, bm, mat, coll, ricalcola=False)
+    if lato:
+        uv_metri(ob, lato)
+    return ob
+
+
+def piano_immagine(nome, larghezza, altezza, mat, coll):
+    """Rettangolo in piedi che guarda verso -Y, con l'immagine dritta."""
+    w, h = larghezza / 2, altezza / 2
+    bm = bmesh.new()
+    f = bm.faces.new([bm.verts.new(v) for v in ((-w, 0, -h), (w, 0, -h), (w, 0, h), (-w, 0, h))])
+    uv = bm.loops.layers.uv.new("UVMap")
+    for loop, coord in zip(f.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+        loop[uv].uv = coord
+    bm.normal_update()
+    if f.normal.y > 0:
+        f.normal_flip()
+    return da_bmesh(nome, bm, mat, coll, ricalcola=False)
+
+
+def luce_spot(nome, coll, loc, verso, watt, cono_gradi=50.0, colore_luce=(1.0, 0.955, 0.9), padre=None):
+    dati = bpy.data.lights.new(nome, "SPOT")
+    dati.energy = watt
+    dati.spot_size = math.radians(cono_gradi)
+    dati.spot_blend = 0.6
+    dati.shadow_soft_size = 0.12
+    dati.color = colore_luce
+    ob = bpy.data.objects.new(nome, dati)
+    coll.objects.link(ob)
+    ob.parent = padre
+    ob.location = loc
+    ob.rotation_mode = "QUATERNION"
+    ob.rotation_quaternion = (Vector(verso) - Vector(loc)).to_track_quat("-Z", "Y")
+    return ob
+
+
+# ================================================================ scena pulita
+for ob in list(bpy.data.objects):
+    bpy.data.objects.remove(ob, do_unlink=True)
+for c in list(bpy.data.collections):
+    bpy.data.collections.remove(c)
+for blocco in (bpy.data.meshes, bpy.data.materials, bpy.data.lights, bpy.data.cameras, bpy.data.images):
+    for d in list(blocco):
+        if d.users == 0:
+            blocco.remove(d)
+
+scena = bpy.context.scene
+scena.name = "Stanza Reddoak"
+scena.unit_settings.system = "METRIC"
+rng = random.Random(2014)   # Reddoak nasce nel 2014
+
+# ================================================================ materiali
+# l'intonaco fotografato e' grigio: lo porto a un bianco caldo, da atrio
+def _bianco_caldo(c):
+    return c * (0.84 / float(c.mean())) * np.array([1.0, 0.992, 0.972], dtype=np.float32)
+
+
+intonaco_chiaro = variante(os.path.join(RIS, "materiali", "painted_plaster_wall", "diff.jpg"),
+                           os.path.join(TEX, "intonaco-chiaro.jpg"), _bianco_caldo)
+
+M_PIETRA = reale("Pavimento in pietra", "marble_01", ruvidita=0.55, rilievo=0.6)        # lastre da 1,5 m
+M_INTONACO = reale("Intonaco", "painted_plaster_wall", rilievo=0.5, colore_da=intonaco_chiaro)
+M_ROVERE = reale("Rovere", "oak_veneer_01", ruvidita=0.9, rilievo=0.6)
+M_TESSUTO = reale("Tappeto di lana", "poly_wool_herringbone", rilievo=1.0)
+M_CEMENTO = reale("Cemento fioriere", "concrete_floor_02", rilievo=0.8)
+LATO_PIETRA, LATO_INTONACO, LATO_ROVERE, LATO_TESSUTO, LATO_CEMENTO = 1.5, 2.0, 1.83, 0.55, 2.0
+
+M_BIANCO = materiale("Bianco opaco", "#ECE9E3", ruvidita=0.6)
+M_PIANO = materiale("Piano in quarzo", "#F2F0EB", ruvidita=0.18)
+M_ROSSO_LUCE = materiale("Rosso Reddoak · luce", ROSSO_REDDOAK, ruvidita=0.4, luce=6.0)
+M_ANTRACITE = materiale("Alluminio antracite", "#1E2024", ruvidita=0.42, metallo=0.85)
+M_NERO = materiale("Nero opaco", "#0D0D0F", ruvidita=0.55)
+M_ACCIAIO = materiale("Acciaio satinato", "#B9BCC0", ruvidita=0.32, metallo=1.0)
+M_BRONZO = materiale("Bronzo lucido", "#B8773C", ruvidita=0.2, metallo=1.0)
+M_BRONZO_SCURO = materiale("Bronzo brunito", "#5E3F26", ruvidita=0.42, metallo=1.0)
+M_TERRA = materiale("Terriccio", "#2A1F18", ruvidita=0.95)
+M_LUCE_ANELLO = materiale("Luce anello", "#FFF1DC", luce=5.0)
+M_FARETTO = materiale("Faretto acceso", "#FFE9CC", luce=45.0)
+M_MURO_SCURO = materiale("Muro di fondo blu notte", "#2A3142", ruvidita=0.8)   # scuro: fa risaltare stand e insegne
+M_MONITOR = materiale("Monitor reception", "#EEF2F7", ruvidita=0.3, luce=0.9)
+
+# ================================================================ modelli veri (Poly Haven)
+_stampi = {}
+c_stampi = collezione("Stampi (cancellati a fine script)")
+
+
+def modello(nome, etichetta, coll, padre=None, loc=(0, 0, 0), rot_z=0.0, scala=1.0, altezza=None, solo_foto=False):
+    """Mette nella stanza una copia di un modello Poly Haven. Poggia a terra sul punto 'loc'.
+    altezza = quanto dev'essere alto in metri (se manca usa 'scala')."""
+    if nome not in _stampi:
+        prima = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(RIS, "modelli", nome, nome + ".gltf"))
+        nuovi = [o for o in bpy.data.objects if o not in prima]
+        bpy.context.view_layer.update()
+        pts = [o.matrix_world @ Vector(c) for o in nuovi if o.type == "MESH" for c in o.bound_box]
+        lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+        hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+        for o in nuovi:
+            for c in list(o.users_collection):
+                c.objects.unlink(o)
+            c_stampi.objects.link(o)
+        _stampi[nome] = (nuovi, lo, hi)
+        d = hi - lo
+        print(f"Modello {nome}: {d.x:.2f} x {d.y:.2f} x {d.z:.2f} m, {len(nuovi)} oggetti")
+    nuovi, lo, hi = _stampi[nome]
+    if altezza:
+        scala = altezza / (hi.z - lo.z)
+    g = vuoto(etichetta, coll, padre, loc, (0, 0, rot_z), 0.25)
+    g.scale = (scala, scala, scala)
+    copie = {}
+    for o in nuovi:
+        c = o.copy()
+        c.name = f"{etichetta} · {o.name}"
+        coll.objects.link(c)
+        if solo_foto:
+            c["solo_foto"] = True
+        copie[o] = c
+    piede = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
+    for o, c in copie.items():
+        if o.parent in copie:
+            c.parent = copie[o.parent]
+        else:
+            c.parent = g
+            c.location = Vector(o.location) - piede
+    return g
+
+
+_rossi = {}
+
+
+def _foglie_rosse(c):
+    """Da foglie verdi a foglie da quercia rossa in autunno."""
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    return np.stack([np.clip(g * 1.55 + 0.05, 0, 1), r * 0.42, b * 0.3], axis=-1)
+
+
+def arrossa(gruppo):
+    """Trasforma un albero verde in una quercia rossa: stesso modello, foglie ricolorate."""
+    for ob in gruppo.children_recursive:
+        if ob.type != "MESH":
+            continue
+        if ob.data.name not in _rossi:
+            mesh = ob.data.copy()
+            for i, m in enumerate(mesh.materials):
+                if m is None:
+                    continue
+                immagini = [n for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image
+                            and "leaves_diff" in os.path.basename(n.image.filepath)]
+                if not immagini:
+                    continue
+                m2 = m.copy()
+                m2.name = m.name + " · rosso"
+                for n in m2.node_tree.nodes:
+                    if n.type == "TEX_IMAGE" and n.image and "leaves_diff" in os.path.basename(n.image.filepath):
+                        origine = bpy.path.abspath(n.image.filepath)
+                        n.image = carica(variante(origine, os.path.join(TEX, "foglie-rosse.jpg"), _foglie_rosse))
+                mesh.materials[i] = m2
+            _rossi[ob.data.name] = mesh
+        ob.data = _rossi[ob.data.name]
+
+
+def albero(etichetta, coll, padre, loc, alto, rosso=False):
+    """Albero vero in una grande fioriera di cemento."""
+    g = vuoto(etichetta, coll, padre, loc, (0, 0, 0), 0.3)
+    vaso = uv_metri(cilindro(f"{etichetta} · fioriera", 0.6, 0.0, 0.62, M_CEMENTO, coll), LATO_CEMENTO)
+    vaso.parent = g
+    cilindro(f"{etichetta} · terra", 0.54, 0.6, 0.625, M_TERRA, coll).parent = g
+    t = modello("tree_small_02", f"{etichetta} · albero", coll, g, (0, 0, 0.6), rng.uniform(0, 6.28),
+                altezza=alto, solo_foto=True)
+    if rosso:
+        arrossa(t)
+    return g
+
+
+# ================================================================ struttura: il salone con l'arco dei progetti
+c_stanza = collezione("Salone")
+c_soffitto = collezione("Soffitto (nascosto nella vista, si vede nel render)")
+c_verde = collezione("Alberi e piante")
+centro_occhi = (0, 0, OCCHI)
+
+
+def direzione(gradi):
+    """Da chi guarda: 0 = dritto davanti (+Y), positivo = verso destra."""
+    a = math.radians(gradi)
+    return Vector((math.sin(a), math.cos(a), 0.0))
+
+
+# pianta del salone: l'arco di fondo a 5 facce (una per progetto), due pareti laterali e l'ingresso alle spalle
+R_SPIGOLI = R_ARCO / math.cos(math.radians(PASSO / 2))
+SPIGOLI = [direzione(-2.5 * PASSO + PASSO * i) * R_SPIGOLI for i in range(6)]
+MEZZA_LARG = SPIGOLI[5].x
+CONTORNO = [(v.x, v.y) for v in SPIGOLI] + [(MEZZA_LARG, FONDO_Y), (-MEZZA_LARG, FONDO_Y)]
+
+piano_orientato("Pavimento", [(x, y, 0.0) for x, y in CONTORNO], M_PIETRA, c_stanza, (0, 0, 10), lato=LATO_PIETRA)
+
+
+def trave(nome, a, b, larg, alt, z, mat, coll, smusso=0.02):
+    a, b = Vector(a), Vector(b)
+    d = b - a
+    return scatola(nome, (d.length, larg, alt), ((a.x + b.x) / 2, (a.y + b.y) / 2, z), mat, coll,
+                   smusso=smusso, rot=(0, 0, math.atan2(d.y, d.x)))
+
+
+# ---------------------------------------------------------------- muro di fondo ad arco: intonaco sotto, rovere in alto
+for k in range(5):
+    a, b = SPIGOLI[k], SPIGOLI[k + 1]
+    piano_orientato(f"Muro di fondo {k + 1}", [(a.x, a.y, 0), (b.x, b.y, 0), (b.x, b.y, ALTEZZA), (a.x, a.y, ALTEZZA)],
+                    M_MURO_SCURO, c_stanza, centro_occhi)
+    gradi = (k - 2) * PASSO
+    faccia = vuoto(f"MURO_{k + 1}", c_stanza, None, tuple(direzione(gradi) * R_ARCO), (0, 0, -math.radians(gradi)), 0.3)
+    larg_faccia = (b - a).length
+    COLONNE, RIGHE, FUGA = 4, 2, 0.012
+    lp, ap = larg_faccia / COLONNE, (ALTEZZA - Z_ROVERE) / RIGHE
+    for c in range(COLONNE):
+        for r in range(RIGHE):
+            pan = scatola(f"Boiserie {k + 1}.{c + 1}.{r + 1}", (lp - FUGA, 0.05, ap - FUGA),
+                          (-larg_faccia / 2 + lp * (c + 0.5), -0.025, Z_ROVERE + ap * (r + 0.5)), M_ROVERE, c_stanza, smusso=0.004)
+            uv_metri(pan, LATO_ROVERE, sposta=(rng.random(), rng.random()))
+            pan.parent = faccia
+    # filo di luce calda sotto la fascia di rovere
+    scatola(f"Gola luminosa {k + 1}", (larg_faccia, 0.06, 0.03), (0, -0.03, Z_ROVERE - 0.02), M_LUCE_ANELLO, c_stanza).parent = faccia
+    if k == 2:   # il logo Reddoak, gigante, in alto al centro
+        logo = piano_immagine("Reddoak · logo", 6.0, 6.0 * 180 / 770, materiale_logo("Logo Reddoak", "reddoak-logo.png", 1.0), c_stanza)
+        logo.parent = faccia
+        logo.location = (0, -0.058, Z_ROVERE + (ALTEZZA - Z_ROVERE) / 2)
+
+
+# ---------------------------------------------------------------- pareti vetrate (lati e ingresso): la citta' tutto attorno
+def facciata(nome, A, B):
+    """Parete quasi tutta di vetro tra i punti A e B: telaio in alluminio scuro, intonaco solo ai bordi."""
+    A, B = Vector((A[0], A[1], 0)), Vector((B[0], B[1], 0))
+    lung = (B - A).length
+    lungo = (B - A).normalized()
+    mezzo = (A + B) / 2
+    dentro = Vector((-lungo.y, lungo.x, 0))
+    if dentro.dot(-mezzo + Vector((0, 4, 0))) < 0:
+        dentro = -dentro
+    S_, bordo = SPESSORE_MURO, 0.6
+
+    def p(t, z, fuori=0.0):
+        v = A + lungo * t - dentro * fuori
+        return (v.x, v.y, z)
+
+    t0, t1 = bordo, lung - bordo
+    centro_vetro = Vector(p(lung / 2, VETRO_ALT / 2, S_ / 2))
+    for pezzo, verts, verso, mat, lato in (
+        ("sinistra", [p(0, 0), p(t0, 0), p(t0, ALTEZZA), p(0, ALTEZZA)], centro_occhi, M_INTONACO, LATO_INTONACO),
+        ("destra", [p(t1, 0), p(lung, 0), p(lung, ALTEZZA), p(t1, ALTEZZA)], centro_occhi, M_INTONACO, LATO_INTONACO),
+        ("sopra", [p(t0, VETRO_ALT), p(t1, VETRO_ALT), p(t1, ALTEZZA), p(t0, ALTEZZA)], centro_occhi, M_INTONACO, LATO_INTONACO),
+        ("spalla sx", [p(t0, 0), p(t0, 0, S_), p(t0, VETRO_ALT, S_), p(t0, VETRO_ALT)], centro_vetro, M_INTONACO, LATO_INTONACO),
+        ("spalla dx", [p(t1, 0), p(t1, 0, S_), p(t1, VETRO_ALT, S_), p(t1, VETRO_ALT)], centro_vetro, M_INTONACO, LATO_INTONACO),
+        ("architrave", [p(t0, VETRO_ALT), p(t1, VETRO_ALT), p(t1, VETRO_ALT, S_), p(t0, VETRO_ALT, S_)], centro_vetro, M_INTONACO, LATO_INTONACO),
+        ("soglia", [p(t0, 0), p(t1, 0), p(t1, 0, S_), p(t0, 0, S_)], centro_vetro, M_PIETRA, LATO_PIETRA),
+    ):
+        piano_orientato(f"{nome} · {pezzo}", verts, mat, c_stanza, verso, lato=lato)
+    # +X locale lungo la parete, +Y locale verso fuori
+    vet = vuoto(f"VETRATA_{nome}", c_stanza, None, (mezzo.x, mezzo.y, 0), (0, 0, math.atan2(lungo.y, lungo.x)), 0.3)
+    fuori_y = 0.22 if Vector((-lungo.y, lungo.x, 0)).dot(dentro) < 0 else -0.22
+    larg = t1 - t0
+    pezzi = [("telaio sx", (0.1, 0.18, VETRO_ALT), (-larg / 2 + 0.05, fuori_y, VETRO_ALT / 2)),
+             ("telaio dx", (0.1, 0.18, VETRO_ALT), (larg / 2 - 0.05, fuori_y, VETRO_ALT / 2)),
+             ("telaio alto", (larg, 0.18, 0.1), (0, fuori_y, VETRO_ALT - 0.05)),
+             ("telaio basso", (larg, 0.18, 0.1), (0, fuori_y, 0.05))]
+    campate = max(2, round(larg / 1.6))
+    for i in range(1, campate):
+        pezzi.append((f"montante {i}", (0.06, 0.16, VETRO_ALT), (-larg / 2 + larg * i / campate, fuori_y, VETRO_ALT / 2)))
+    z = 2.8
+    while z < VETRO_ALT - 1.0:
+        pezzi.append((f"traverso {z:.1f}", (larg, 0.16, 0.06), (0, fuori_y, z)))
+        z += 2.8
+    for n_, dim, loc in pezzi:
+        scatola(f"{nome} · {n_}", dim, loc, M_ANTRACITE, c_stanza).parent = vet
+
+
+facciata("Vetrata destra", CONTORNO[5], CONTORNO[6])
+facciata("Vetrata ingresso", CONTORNO[6], CONTORNO[7])
+facciata("Vetrata sinistra", CONTORNO[7], CONTORNO[0])
+
+# ---------------------------------------------------------------- soffitto con il grande lucernario a pentagono (5 progetti)
+C_LUC = Vector((0.0, 6.0, 0.0))
+
+
+def pent(k, raggio):
+    a = math.radians(90.0 - 72.0 * (k % 5))
+    return C_LUC + Vector((raggio * math.cos(a), raggio * math.sin(a), 0.0))
+
+
+bm = bmesh.new()
+est = [bm.verts.new((x, y, ALTEZZA)) for x, y in CONTORNO]
+inn = [bm.verts.new((pent(k, R_LUCERNARIO).x, pent(k, R_LUCERNARIO).y, ALTEZZA)) for k in range(5)]
+bordi = [bm.edges.new((est[i], est[(i + 1) % len(est)])) for i in range(len(est))]
+bordi += [bm.edges.new((inn[i], inn[(i + 1) % 5])) for i in range(5)]
+bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=bordi)
+bm.normal_update()
+for f in bm.faces:
+    if f.normal.z > 0:
+        f.normal_flip()
+uv_metri(da_bmesh("Soffitto", bm, M_INTONACO, c_soffitto, ricalcola=False), LATO_INTONACO)
+
+R_ANELLO, Z_ANELLO = 4.2, 10.2
+for k in range(5):
+    a0, b0 = pent(k, R_LUCERNARIO), pent(k + 1, R_LUCERNARIO)
+    piano_orientato(f"Lucernario {k + 1} · pozzo",
+                    [(a0.x, a0.y, ALTEZZA), (b0.x, b0.y, ALTEZZA), (b0.x, b0.y, ALTEZZA + 1.0), (a0.x, a0.y, ALTEZZA + 1.0)],
+                    M_INTONACO, c_soffitto, (C_LUC.x, C_LUC.y, ALTEZZA + 0.5), lato=LATO_INTONACO)
+    trave(f"Lucernario · raggio {k + 1}", C_LUC, pent(k, R_LUCERNARIO), 0.1, 0.18, ALTEZZA + 0.9, M_ANTRACITE, c_soffitto, 0.0)
+    trave(f"Lucernario · bordo {k + 1}", pent(k, R_LUCERNARIO), pent(k + 1, R_LUCERNARIO), 0.1, 0.18, ALTEZZA + 0.9, M_ANTRACITE, c_soffitto, 0.0)
+    trave(f"Lucernario · mezzo {k + 1}", pent(k, R_LUCERNARIO / 2), pent(k + 1, R_LUCERNARIO / 2), 0.08, 0.14, ALTEZZA + 0.9, M_ANTRACITE, c_soffitto, 0.0)
+    # grande anello luminoso sospeso: alluminio scuro sopra, luce sotto
+    trave(f"Anello · corpo {k + 1}", pent(k, R_ANELLO), pent(k + 1, R_ANELLO), 0.16, 0.1, Z_ANELLO + 0.06, M_ANTRACITE, c_soffitto, 0.01)
+    trave(f"Anello · luce {k + 1}", pent(k, R_ANELLO), pent(k + 1, R_ANELLO), 0.12, 0.03, Z_ANELLO, M_LUCE_ANELLO, c_soffitto, 0.0)
+    pa = pent(k, R_ANELLO)
+    tubo(f"Anello cavo {k + 1}", (pa.x, pa.y, Z_ANELLO + 0.1), (pa.x, pa.y, ALTEZZA + 0.9), 0.008, M_ACCIAIO, c_soffitto)
+
+# faretti incassati lungo l'arco
+for i in range(15):
+    f_ = direzione(-84 + 12 * i) * 15.0
+    cilindro(f"Faretto {i + 1} · ghiera", 0.1, ALTEZZA - 0.012, ALTEZZA, M_ANTRACITE, c_soffitto, f_.x, f_.y)
+    cilindro(f"Faretto {i + 1}", 0.07, ALTEZZA - 0.016, ALTEZZA - 0.01, M_FARETTO, c_soffitto, f_.x, f_.y)
+
+# ================================================================ pezzi per costruire gli stand (stile Engine: forme pulite, colori pieni)
+PZ = 0.16   # altezza della pedana di ogni stand
+
+
+def lacca(hex_, ruvidita=0.3):
+    return materiale(f"Lacca {hex_.upper()} {ruvidita}", hex_, ruvidita=ruvidita, vernice=0.45)
+
+
+def neon(hex_, forza=6.0):
+    return materiale(f"Neon {hex_.upper()} {forza}", hex_, luce=forza)
+
+
+def lastra(nome, pianta, spessore, mat, coll, smusso=0.0):
+    """Sagoma piatta in piedi: la pianta e' disegnata 'di fronte' (x = larghezza, y = altezza)."""
+    ob = prisma(nome, pianta, -spessore / 2, spessore / 2, mat, coll)
+    ob.rotation_euler = (math.pi / 2, 0, 0)
+    if smusso > 0:
+        mod = ob.modifiers.new("Smusso", "BEVEL")
+        mod.width = smusso
+        mod.segments = 3
+    return ob
+
+
+def sagoma_arco(larg, alto, lati=28):
+    w = larg / 2
+    pts = [(-w, 0.0), (w, 0.0)]
+    for i in range(lati + 1):
+        a = math.pi * i / lati
+        pts.append((w * math.cos(a), alto - w + w * math.sin(a)))
+    return pts
+
+
+def cuore(scala):
+    pts = []
+    for i in range(48):
+        t = 2 * math.pi * i / 48
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        pts.append((x * scala / 16, y * scala / 16))
+    return pts[::-1]
+
+
+def stella(r_fuori, r_dentro, punte=4):
+    return [((r_fuori if i % 2 == 0 else r_dentro) * math.cos(math.pi / 2 + math.pi * i / punte),
+             (r_fuori if i % 2 == 0 else r_dentro) * math.sin(math.pi / 2 + math.pi * i / punte)) for i in range(punte * 2)]
+
+
+def poligono_regolare(lati, raggio, giro=0.0):
+    return [(raggio * math.cos(giro + 2 * math.pi * i / lati), raggio * math.sin(giro + 2 * math.pi * i / lati)) for i in range(lati)]
+
+
+def anello(nome, raggio, spessore, centro, rotazione, mat, coll):
+    bm = bmesh.new()
+    seg, lati = 64, 14
+    anelli_ = []
+    for i in range(seg):
+        a = 2 * math.pi * i / seg
+        anelli_.append([bm.verts.new(((raggio + spessore * math.cos(2 * math.pi * j / lati)) * math.cos(a),
+                                      (raggio + spessore * math.cos(2 * math.pi * j / lati)) * math.sin(a),
+                                      spessore * math.sin(2 * math.pi * j / lati))) for j in range(lati)])
+    for i in range(seg):
+        for j in range(lati):
+            f = bm.faces.new((anelli_[i][j], anelli_[(i + 1) % seg][j], anelli_[(i + 1) % seg][(j + 1) % lati], anelli_[i][(j + 1) % lati]))
+            f.smooth = True
+    ob = da_bmesh(nome, bm, mat, coll)
+    ob.location = centro
+    ob.rotation_euler = rotazione
+    return ob
+
+
+def testo(nome, scritta, alto, mat, coll, spessore=0.025):
+    """Scritta in rilievo, in piedi, che guarda verso -Y."""
+    cu = bpy.data.curves.new(nome, "FONT")
+    cu.body = scritta
+    cu.size = alto
+    cu.extrude = spessore
+    cu.align_x = "CENTER"
+    cu.align_y = "CENTER"
+    cu.materials.append(mat)
+    ob = bpy.data.objects.new(nome, cu)
+    coll.objects.link(ob)
+    ob.rotation_euler = (math.pi / 2, 0, 0)
+    return ob
+
+
+def insegna(nome, file_immagine, larghezza, coll):
+    """Insegna luminosa con il logo: cassonetto bianco, il davanti (verso -Y) e' l'immagine accesa."""
+    alto = larghezza * 720 / 1760
+    cassa = scatola(f"Insegna {nome} · cassonetto", (larghezza + 0.14, 0.16, alto + 0.14), (0, 0, 0), M_BIANCO_LUCIDO, coll, smusso=0.05)
+    fronte = piano_immagine(f"Insegna {nome} · logo", larghezza, alto, materiale_schermo(f"Insegna {nome}", file_immagine), coll)
+    fronte.parent = cassa
+    fronte.location = (0, -0.086, 0)
+    return cassa
+
+
+def festone(nome, a, b, calata, coll, lampadine=11):
+    """Filo di lampadine appeso tra due punti, come alle feste di paese."""
+    a, b = Vector(a), Vector(b)
+    prec = None
+    for i in range(lampadine + 1):
+        t = i / lampadine
+        p_ = a.lerp(b, t) - Vector((0, 0, calata * 4 * t * (1 - t)))
+        if prec is not None:
+            tubo(f"{nome} · filo {i}", prec, p_, 0.007, M_NERO, coll)
+        if 0 < i < lampadine:
+            sfera(f"{nome} · lampadina {i}", 0.06, tuple(p_ - Vector((0, 0, 0.08))), M_LAMPADINA, coll)
+        prec = p_
+
+
+def auto(etichetta, coll, padre, loc, rot_z, m_carrozzeria):
+    """Utilitaria dalle forme pulite, lunga 3,9 m. Il muso guarda verso +X locale."""
+    g = vuoto(etichetta, coll, padre, loc, (0, 0, rot_z), 0.4)
+
+    def A(ob):
+        ob.parent = g
+        return ob
+
+    corpo = A(lastra(f"{etichetta} · carrozzeria",
+                     [(-1.95, 0.3), (1.95, 0.3), (1.98, 0.6), (1.9, 0.82), (1.05, 0.93), (-1.2, 0.95), (-1.9, 0.9), (-1.98, 0.62)],
+                     1.7, m_carrozzeria, coll, smusso=0.13))
+    corpo.modifiers[-1].segments = 5
+    cab = A(lastra(f"{etichetta} · vetri", [(-1.45, 0.9), (0.95, 0.9), (0.42, 1.44), (-1.12, 1.46)], 1.5, M_VETRO_AUTO, coll, smusso=0.09))
+    A(scatola(f"{etichetta} · tetto", (1.5, 1.42, 0.07), (-0.36, 0, 1.47), m_carrozzeria, coll, smusso=0.03))
+    for sx in (-0.02,):   # montante centrale
+        A(scatola(f"{etichetta} · montante", (0.09, 1.53, 0.5), (-0.25, 0, 1.18), m_carrozzeria, coll, smusso=0.01))
+    for i, (x, y) in enumerate(((1.22, -0.8), (1.22, 0.8), (-1.2, -0.8), (-1.2, 0.8))):
+        verso = -1 if y < 0 else 1
+        A(tubo(f"{etichetta} · ruota {i + 1}", (x, y - 0.12, 0.34), (x, y + 0.12, 0.34), 0.34, M_GOMMA, coll))
+        A(tubo(f"{etichetta} · cerchio {i + 1}", (x, y + verso * 0.115, 0.34), (x, y + verso * 0.135, 0.34), 0.2, M_ACCIAIO, coll))
+        A(tubo(f"{etichetta} · passaruota {i + 1}", (x, y - verso * 0.02, 0.36), (x, y + verso * 0.062, 0.36), 0.43, M_NERO, coll))
+    for i, y in enumerate((-0.56, 0.56)):
+        A(scatola(f"{etichetta} · faro {i + 1}", (0.08, 0.36, 0.17), (1.93, y, 0.7), neon("#FFF3C8", 5.0), coll, smusso=0.03))
+        A(scatola(f"{etichetta} · stop {i + 1}", (0.08, 0.3, 0.14), (-1.96, y, 0.74), neon("#FF1A1A", 3.0), coll, smusso=0.03))
+    A(scatola(f"{etichetta} · paraurti davanti", (0.16, 1.62, 0.2), (1.9, 0, 0.36), M_NERO, coll, smusso=0.05))
+    A(scatola(f"{etichetta} · paraurti dietro", (0.16, 1.62, 0.2), (-1.9, 0, 0.36), M_NERO, coll, smusso=0.05))
+    A(scatola(f"{etichetta} · calandra", (0.05, 0.6, 0.1), (1.97, 0, 0.6), M_NERO, coll, smusso=0.02))
+    return g
+
+
+M_BIANCO_LUCIDO = materiale("Bianco lucido", "#F6F4F0", ruvidita=0.22, vernice=0.5)
+M_GOMMA = materiale("Gomma", "#17171A", ruvidita=0.75)
+M_VETRO_AUTO = materiale("Vetro auto", "#16202E", ruvidita=0.06, vernice=1.0)
+M_LAMPADINA = materiale("Lampadina festone", "#FFD9A0", luce=18.0)
+M_ASFALTO = materiale("Asfalto", "#34373E", ruvidita=0.85)
+M_BOLLA = materiale("Bolla di sapone", "#DDF1FF", ruvidita=0.02, vernice=1.0)
+
+# querce rosse tra uno stand e l'altro: separano gli stand e sono il simbolo di Reddoak
+for i, gradi in enumerate((-90, -54, -18, 18, 54, 90)):
+    q = direzione(gradi) * (R_ARCO - 2.0)
+    albero(f"Quercia rossa {i + 1}", c_verde, None, (q.x, q.y, 0), rng.uniform(5.0, 5.8), rosso=True)
+
+# ================================================================ i 5 stand, uno diverso dall'altro, ben distanziati
+c_hotspot = collezione("Hotspot (punti cliccabili sul sito)")
+cime = []   # punti alti di ogni stand, per appendere i festoni di lampadine
+
+for k, prog in enumerate(PROGETTI):
+    coll = collezione(f"Stand {k + 1} · {prog['nome']}")
+    N, ID = prog["nome"], prog["id"]
+    gradi = (k - 2) * PASSO
+    m_col = lacca(prog["colore"])
+
+    # Tutto lo stand e' agganciato a questo Empty: spostandolo si sposta tutto insieme.
+    # +Y locale va verso il muro di fondo, -Y verso chi guarda, +X e' la destra di chi guarda.
+    base = vuoto(f"ANGOLO_{k + 1}_{ID}", coll, None, tuple(direzione(gradi) * R_STAND), (0, 0, -math.radians(gradi)), 0.5)
+    base.empty_display_type = "ARROWS"
+
+    def S(ob, padre=None, base=base):
+        ob.parent = padre or base
+        return ob
+
+    def box(n, dim, loc, mat, smusso=0.02, rot=None, padre=None):
+        return S(scatola(f"{N} · {n}", dim, loc, mat, coll, smusso=smusso, rot=rot), padre)
+
+    def palla(n, r, loc, mat, scala=None, padre=None):
+        return S(sfera(f"{N} · {n}", r, loc, mat, coll, scala=scala), padre)
+
+    def asta(n, a_, b_, r, mat, padre=None):
+        return S(tubo(f"{N} · {n}", a_, b_, r, mat, coll), padre)
+
+    def gruppo(n, loc=(0, 0, 0), rot=(0, 0, 0), padre=None):
+        return vuoto(f"{N} · {n}", coll, padre or base, loc, rot, 0.15)
+
+    def sagoma(n, pianta, spessore, loc, mat, smusso=0.0, rot_z=0.0, padre=None):
+        ob = S(lastra(f"{N} · {n}", pianta, spessore, mat, coll, smusso=smusso), padre)
+        ob.location = loc
+        ob.rotation_euler = (math.pi / 2, 0, rot_z)
+        return ob
+
+    def logo_in_cima(z, larghezza=3.3, y=1.75):
+        ins = S(insegna(N, f"insegna-{ID}.png", larghezza, coll))
+        ins.location = (0, y, z)
+        return ins
+
+    # pedana nel colore del progetto, con il bordo bianco
+    box("pedana bordo", (6.5, 5.1, PZ - 0.06), (0, 0, (PZ - 0.06) / 2), M_BIANCO_LUCIDO, 0.03)
+    box("pedana", (6.3, 4.9, 0.06), (0, 0, PZ - 0.03), m_col, 0.02)
+    cima = 6.2
+
+    # ------------------------------------------------------------ meravigliä: lo studio dei social
+    if ID == "meraviglia":
+        notte, giallo, rosa = lacca("#0B1020"), lacca("#FFC93C"), lacca("#FF7AA8")
+        sagoma("arco", sagoma_arco(5.7, 6.0), 0.3, (0, 2.05, PZ), m_col, 0.04)
+        sagoma("arco interno", sagoma_arco(4.9, 5.45), 0.06, (0, 1.88, PZ), M_BIANCO_LUCIDO)
+        palla("puntino ä 1", 0.34, (-0.55, 2.05, PZ + 6.42), notte)
+        palla("puntino ä 2", 0.34, (0.55, 2.05, PZ + 6.42), notte)
+        logo_in_cima(PZ + 4.55, 3.0, 1.78)
+        # il telefono gigante con il lavoro vero dell'agenzia
+        tel = gruppo("telefono", (-0.75, 0.75, PZ + 1.75), (math.radians(-7), 0, math.radians(-10)))
+        box("telefono scocca", (1.86, 0.16, 3.1), (0, 0, 0), notte, 0.14, padre=tel)
+        sch = S(piano_immagine(f"{N} · telefono schermo", 1.66, 2.656, materiale_schermo(f"Schermo {N}", f"schermo-{ID}.png"), coll), tel)
+        sch.location = (0, -0.085, 0)
+        box("telefono base", (2.1, 0.9, 0.12), (-0.75, 0.8, PZ + 0.06), M_BIANCO_LUCIDO, 0.04, rot=(0, 0, math.radians(-10)))
+        # la luce ad anello dei video, sul treppiede
+        S(anello(f"{N} · luce ad anello", 0.62, 0.05, (1.85, 0.2, PZ + 2.25), (math.pi / 2, 0, math.radians(18)), neon("#FFF4E0", 9.0), coll))
+        asta("treppiede stelo", (1.85, 0.25, PZ), (1.85, 0.25, PZ + 1.62), 0.03, M_NERO)
+        for i in range(3):
+            a_ = math.radians(90 + 120 * i)
+            asta(f"treppiede gamba {i + 1}", (1.85, 0.25, PZ + 0.75), (1.85 + 0.6 * math.cos(a_), 0.25 + 0.6 * math.sin(a_), PZ), 0.022, M_NERO)
+        box("telefonino sul treppiede", (0.2, 0.03, 0.4), (1.85, 0.2, PZ + 2.25), notte, 0.02, rot=(0, 0, math.radians(18)))
+        # cuore, fumetto e pollice: le reazioni ai post
+        cu = sagoma("cuore", cuore(0.5), 0.26, (2.35, 1.45, PZ + 4.25), rosa, 0.06, math.radians(12))
+        fum = gruppo("fumetto", (-2.5, 1.3, PZ + 4.1), (0, 0, math.radians(-14)))
+        box("fumetto corpo", (1.25, 0.26, 0.85), (0, 0, 0), giallo, 0.2, padre=fum)
+        for i in range(3):
+            palla(f"fumetto punto {i + 1}", 0.085, (-0.3 + 0.3 * i, -0.15, 0), notte, padre=fum)
+        S(cono(f"{N} · fumetto coda", 0.2, 0.0, 0.36, (-2.2, 1.3, PZ + 3.58), giallo, coll)).rotation_euler = (math.pi, math.radians(-20), 0)
+        # la griglia dei post, a terra come campioni colore
+        for i, hx in enumerate(("#247DFF", "#FFC93C", "#FF7AA8", "#0B1020", "#BFD9FF", "#247DFF")):
+            box(f"post {i + 1}", (0.62, 0.05, 0.62), (1.35 + (i % 3) * 0.7, 1.84, PZ + 1.1 + (i // 3) * 0.7), lacca(hx), 0.03)
+        modello("modern_arm_chair_01", f"{N} · poltrona", coll, base, (0.9, -1.25, PZ), math.radians(-35))
+        modello("potted_plant_02", f"{N} · pianta", coll, base, (-2.55, -1.6, PZ), 1.0, altezza=1.35)
+        cima = PZ + 6.75
+
+    # ------------------------------------------------------------ myPushop: il negozio sotto casa
+    elif ID == "mypushop":
+        scuro = lacca("#B81444")
+        box("negozio", (5.3, 2.3, 3.5), (0, 1.15, PZ + 1.75), M_BIANCO_LUCIDO, 0.05)
+        box("zoccolo", (5.36, 2.36, 0.5), (0, 1.15, PZ + 0.25), m_col, 0.03)
+        box("tetto", (5.7, 2.75, 0.24), (0, 1.1, PZ + 3.62), m_col, 0.06)
+        box("vetrina cornice", (2.9, 0.12, 2.0), (-0.95, -0.03, PZ + 1.65), m_col, 0.04)
+        box("vetrina", (2.66, 0.1, 1.76), (-0.95, -0.06, PZ + 1.65), neon("#FFE6B8", 2.2), 0.01)
+        for i, (x, h, hx) in enumerate(((-1.85, 0.5, "#EB255A"), (-1.35, 0.8, "#FFD0DC"), (-0.85, 0.42, "#FFC93C"), (-0.3, 0.66, "#EB255A"))):
+            box(f"vetrina prodotto {i + 1}", (0.34, 0.2, h), (x, -0.2, PZ + 0.86 + h / 2), lacca(hx), 0.05)
+        box("vetrina mensola", (2.66, 0.34, 0.06), (-0.95, -0.18, PZ + 0.84), M_BIANCO_LUCIDO, 0.01)
+        box("porta", (1.1, 0.1, 2.3), (1.6, -0.02, PZ + 1.15), scuro, 0.04)
+        S(tubo(f"{N} · porta oblo'", (1.6, -0.09, PZ + 1.65), (1.6, -0.07, PZ + 1.65), 0.3, neon("#FFE6B8", 2.0), coll))
+        palla("porta maniglia", 0.05, (1.22, -0.1, PZ + 1.15), M_ACCIAIO)
+        for i in range(11):   # tenda a righe
+            box(f"tenda {i + 1}", (0.5, 1.25, 0.05), (-2.5 + i * 0.5, -0.62, PZ + 3.02), m_col if i % 2 == 0 else M_BIANCO_LUCIDO, 0.012,
+                rot=(math.radians(22), 0, 0))
+            box(f"tenda frangia {i + 1}", (0.5, 0.05, 0.24), (-2.5 + i * 0.5, -1.2, PZ + 2.68), m_col if i % 2 == 0 else M_BIANCO_LUCIDO, 0.02)
+        logo_in_cima(PZ + 4.5, 3.3, 0.6)
+        for x in (-1.3, 1.3):
+            asta(f"insegna sostegno {x}", (x, 0.6, PZ + 3.7), (x, 0.6, PZ + 3.95), 0.04, M_ACCIAIO)
+        # il segnaposto gigante sul tetto: "sei qui, nel negozio sotto casa"
+        palla("segnaposto testa", 0.62, (2.05, 1.5, PZ + 5.35), m_col)
+        S(cono(f"{N} · segnaposto punta", 0.0, 0.56, 1.1, (2.05, 1.5, PZ + 4.42), m_col, coll))
+        palla("segnaposto occhio", 0.24, (2.05, 1.0, PZ + 5.42), M_BIANCO_LUCIDO)
+        sagoma("cuore al neon", cuore(0.34), 0.08, (1.6, -0.1, PZ + 2.85), neon("#FF5C8A", 7.0))
+        # sacchetti della spesa e tavolino davanti
+        for i, (x, y, h, mat, rz) in enumerate(((-2.45, -1.55, 0.7, m_col, 14), (-1.95, -1.9, 0.5, M_BIANCO_LUCIDO, -18), (-2.6, -2.05, 0.4, scuro, 30))):
+            box(f"sacchetto {i + 1}", (0.52, 0.26, h), (x, y, PZ + h / 2), mat, 0.03, rot=(0, 0, math.radians(rz)))
+            S(anello(f"{N} · sacchetto {i + 1} manico", 0.13, 0.016, (x, y, PZ + h), (math.pi / 2, 0, math.radians(rz)),
+                     M_BIANCO_LUCIDO if mat is not M_BIANCO_LUCIDO else m_col, coll))
+        modello("coffee_table_round_01", f"{N} · tavolino", coll, base, (1.2, -1.55, PZ), 0.3, scala=0.7)
+        modello("potted_plant_01", f"{N} · pianta", coll, base, (2.65, -0.45, PZ), 2.0, altezza=1.3)
+        modello("potted_plant_02", f"{N} · pianta 2", coll, base, (0.45, -0.4, PZ), 4.0, altezza=1.05)
+        cima = PZ + 5.95
+
+    # ------------------------------------------------------------ Quiz Patente: l'autoscuola
+    elif ID == "quiz-patente":
+        blu = lacca("#12357A")
+        box("asfalto", (6.0, 4.6, 0.02), (0, 0, PZ + 0.01), M_ASFALTO, 0.0)
+        for i in range(7):   # strisce pedonali
+            box(f"striscia {i + 1}", (0.42, 1.5, 0.012), (-2.52 + i * 0.84, -1.45, PZ + 0.027), M_BIANCO, 0.0)
+        box("fondale", (5.7, 0.3, 3.5), (0, 2.1, PZ + 1.75), m_col, 0.12)
+        box("fondale fascia", (5.72, 0.32, 0.5), (0, 2.1, PZ + 0.95), blu, 0.02)
+        logo_in_cima(PZ + 4.4, 3.1, 2.0)
+        car = auto(f"{N} · auto", coll, base, (-0.45, 0.35, PZ + 0.02), math.radians(-22), M_BIANCO_LUCIDO)
+        S(scatola(f"{N} · auto cartello", (0.7, 0.5, 0.36), (-0.36, 0, 1.69), blu, coll, smusso=0.05), car)
+        t_ = S(testo(f"{N} · auto cartello testo", "QUIZ", 0.2, M_BIANCO_LUCIDO, coll), car)
+        t_.location = (-0.36, -0.26, 1.69)
+        S(scatola(f"{N} · auto fascia", (3.6, 1.72, 0.1), (0, 0, 0.56), m_col, coll, smusso=0.02), car)
+        # semaforo
+        asta("semaforo palo", (2.55, 1.2, PZ), (2.55, 1.2, PZ + 3.4), 0.07, M_ACCIAIO)
+        box("semaforo testa", (0.5, 0.36, 1.35), (2.55, 1.2, PZ + 4.05), blu, 0.08)
+        for i, (hx, forza) in enumerate((("#FF2A2A", 0.5), ("#FFC400", 0.5), ("#21E05A", 9.0))):
+            palla(f"semaforo luce {i + 1}", 0.155, (2.55, 1.03, PZ + 4.46 - i * 0.41), neon(hx, forza))
+        # cartelli veri: stop, limite 50, pericolo
+        asta("stop palo", (-2.6, 1.0, PZ), (-2.6, 1.0, PZ + 2.5), 0.045, M_ACCIAIO)
+        sagoma("stop", poligono_regolare(8, 0.55, math.pi / 8), 0.05, (-2.6, 0.94, PZ + 2.95), lacca("#D5121E"))
+        sagoma("stop bordo", poligono_regolare(8, 0.6, math.pi / 8), 0.03, (-2.6, 0.96, PZ + 2.95), M_BIANCO_LUCIDO)
+        S(testo(f"{N} · stop testo", "STOP", 0.3, M_BIANCO_LUCIDO, coll)).location = (-2.6, 0.9, PZ + 2.95)
+        asta("limite palo", (2.6, -1.5, PZ), (2.6, -1.5, PZ + 1.7), 0.04, M_ACCIAIO)
+        S(tubo(f"{N} · limite bordo", (2.6, -1.53, PZ + 2.1), (2.6, -1.5, PZ + 2.1), 0.46, lacca("#D5121E"), coll))
+        S(tubo(f"{N} · limite disco", (2.6, -1.55, PZ + 2.1), (2.6, -1.52, PZ + 2.1), 0.35, M_BIANCO_LUCIDO, coll))
+        S(testo(f"{N} · limite testo", "50", 0.36, M_NERO, coll)).location = (2.6, -1.57, PZ + 2.1)
+        asta("pericolo palo", (-2.65, -1.7, PZ), (-2.65, -1.7, PZ + 1.3), 0.04, M_ACCIAIO)
+        sagoma("pericolo", [(-0.5, 0), (0.5, 0), (0, 0.86)], 0.05, (-2.65, -1.74, PZ + 1.25), lacca("#D5121E"), 0.03)
+        sagoma("pericolo interno", [(-0.33, 0), (0.33, 0), (0, 0.57)], 0.06, (-2.65, -1.75, PZ + 1.35), M_BIANCO_LUCIDO)
+        S(testo(f"{N} · pericolo testo", "!", 0.34, M_NERO, coll)).location = (-2.65, -1.8, PZ + 1.56)
+        for i, (x, y) in enumerate(((1.5, -1.9), (0.7, -2.05), (2.0, -0.6))):   # birilli
+            box(f"birillo {i + 1} base", (0.4, 0.4, 0.04), (x, y, PZ + 0.04), m_col, 0.01)
+            S(cono(f"{N} · birillo {i + 1}", 0.16, 0.04, 0.56, (x, y, PZ + 0.34), m_col, coll))
+            S(cono(f"{N} · birillo {i + 1} fascia", 0.118, 0.092, 0.12, (x, y, PZ + 0.38), M_BIANCO_LUCIDO, coll))
+        cima = PZ + 5.3
+
+    # ------------------------------------------------------------ Mister Lavaggio: l'autolavaggio
+    elif ID == "mister-lavaggio":
+        blu, giallo = lacca("#0E3B82"), lacca("#FFD400")
+        box("piastrelle", (6.0, 4.6, 0.02), (0, 0, PZ + 0.01), lacca("#CFE6F7", 0.15), 0.0)
+        for x in (-2.75, 2.75):   # il portale del lavaggio
+            box(f"portale pilastro {x}", (0.55, 0.9, 3.9), (x, 0.7, PZ + 1.95), blu, 0.08)
+            box(f"portale fascia {x}", (0.57, 0.92, 0.3), (x, 0.7, PZ + 1.2), giallo, 0.02)
+        box("portale trave", (6.2, 1.1, 0.75), (0, 0.7, PZ + 4.25), m_col, 0.1)
+        box("portale fascia gialla", (6.22, 1.12, 0.14), (0, 0.7, PZ + 3.93), giallo, 0.02)
+        logo_in_cima(PZ + 5.35, 3.1, 0.7)
+        for x in (-1.2, 1.2):
+            asta(f"insegna sostegno {x}", (x, 0.7, PZ + 4.6), (x, 0.7, PZ + 4.85), 0.04, M_ACCIAIO)
+        for lato in (-1, 1):   # spazzoloni a rullo, a fasce blu e gialle
+            for i in range(6):
+                S(cilindro(f"{N} · rullo {lato} {i + 1}", 0.44 - (i % 2) * 0.03, PZ + 0.5 + i * 0.5, PZ + 1.0 + i * 0.5,
+                           giallo if i % 2 else m_col, coll, lato * 2.0, 0.7))
+        asta("rullo alto", (-1.5, 0.7, PZ + 3.55), (1.5, 0.7, PZ + 3.55), 0.3, giallo)
+        car = auto(f"{N} · auto", coll, base, (0.0, 0.5, PZ + 0.02), math.radians(-90 + 12), lacca("#F4F6FA", 0.12))
+        for i in range(16):   # schiuma su cofano e tetto
+            r = rng.uniform(0.12, 0.24)
+            loc = (rng.uniform(-1.0, 0.3), rng.uniform(-0.6, 0.6), 1.5 + r * 0.3) if i % 2 else (rng.uniform(1.05, 1.8), rng.uniform(-0.65, 0.65), 0.9 + r * 0.3)
+            S(sfera(f"{N} · schiuma {i + 1}", r, loc, M_BIANCO_LUCIDO, coll), car)
+        for i in range(9):    # bolle di sapone
+            palla(f"bolla {i + 1}", rng.uniform(0.1, 0.26), (rng.uniform(-2.2, 2.2), rng.uniform(-2.0, -0.2), PZ + rng.uniform(1.9, 3.6)), M_BOLLA)
+        for i, (x, y, z_, r) in enumerate(((1.75, -1.2, 2.5, 0.34), (-1.9, -1.0, 2.9, 0.26), (0.5, -1.7, 3.1, 0.2))):   # il pulito che brilla
+            sagoma(f"brillio {i + 1}", stella(r, r * 0.28), 0.06, (x, y, PZ + z_), neon("#FFFFFF", 6.0))
+        # secchio con la schiuma, spugna e la goccia
+        S(cono(f"{N} · secchio", 0.22, 0.3, 0.44, (2.25, -1.75, PZ + 0.22), giallo, coll))
+        S(anello(f"{N} · secchio manico", 0.28, 0.014, (2.25, -1.75, PZ + 0.42), (math.radians(76), 0, 0), M_ACCIAIO, coll))
+        for i in range(5):
+            palla(f"secchio schiuma {i + 1}", 0.12, (2.15 + i * 0.06, -1.8 + (i % 2) * 0.12, PZ + 0.5), M_BIANCO_LUCIDO)
+        box("spugna", (0.36, 0.22, 0.12), (1.6, -2.05, PZ + 0.06), giallo, 0.04, rot=(0, 0, math.radians(25)))
+        palla("goccia", 0.36, (-2.3, -1.7, PZ + 0.42), m_col)
+        S(cono(f"{N} · goccia punta", 0.31, 0.0, 0.66, (-2.3, -1.7, PZ + 0.42 + 0.18 + 0.33), m_col, coll))
+        palla("goccia riflesso", 0.09, (-2.42, -2.0, PZ + 0.55), M_BIANCO_LUCIDO)
+        cima = PZ + 6.2
+
+    # ------------------------------------------------------------ Relatia: la sala di controllo dei contatti
+    elif ID == "relatia":
+        notte, viola, magenta = lacca("#170B3B", 0.18), neon("#8A4DFF", 3.0), neon("#E9336F", 3.5)
+        box("pavimento lucido", (6.0, 4.6, 0.02), (0, 0, PZ + 0.01), notte, 0.0)
+        box("fondale", (5.7, 0.3, 4.2), (0, 2.1, PZ + 2.1), notte, 0.1)
+        for lato in (-1, 1):
+            box(f"quinta {lato}", (0.3, 1.6, 3.4), (lato * 2.7, 1.4, PZ + 1.7), m_col, 0.08, rot=(0, 0, math.radians(lato * 18)))
+            box(f"quinta luce {lato}", (0.06, 0.06, 3.3), (lato * 2.48, 0.62, PZ + 1.7), magenta, 0.0)
+        logo_in_cima(PZ + 4.95, 3.0, 2.0)
+        # il grande schermo con il CRM vero e i due pannelli con i grafici
+        box("schermo cornice", (3.5, 0.1, 2.2), (0, 1.85, PZ + 2.2), lacca("#0A0618"), 0.04)
+        sch = S(piano_immagine(f"{N} · schermo", 3.34, 2.0875, materiale_schermo(f"Schermo {N}", f"schermata-{ID}.png"), coll))
+        sch.location = (0, 1.79, PZ + 2.2)
+        for lato in (-1, 1):
+            pan = gruppo(f"pannello {lato}", (lato * 2.15, 1.2, PZ + 2.0), (0, 0, math.radians(-lato * 28)))
+            box(f"pannello {lato} vetro", (1.2, 0.06, 1.7), (0, 0, 0), lacca("#24124F", 0.1), 0.04, padre=pan)
+            for i, h in enumerate((0.3, 0.55, 0.42, 0.8, 1.05)):
+                box(f"pannello {lato} barra {i + 1}", (0.14, 0.03, h), (-0.4 + i * 0.2, -0.045, -0.7 + h / 2),
+                    magenta if (i + (lato > 0)) % 2 == 0 else viola, 0.01, padre=pan)
+        # la rete dei contatti: una costellazione che si accende sopra lo stand
+        nodi = [(-2.3, 1.5, 4.9), (-1.2, 1.2, 5.75), (0.1, 1.4, 6.15), (1.35, 1.1, 5.7), (2.35, 1.5, 4.95), (-0.6, 0.3, 5.2), (0.9, 0.2, 5.15), (0.1, -0.5, 4.75)]
+        for i, n_ in enumerate(nodi):
+            palla(f"rete nodo {i + 1}", 0.2 if i in (2, 7) else 0.14, (n_[0], n_[1], PZ + n_[2]), magenta if i % 2 == 0 else viola)
+        for i, (a_, b_) in enumerate(((0, 1), (1, 2), (2, 3), (3, 4), (1, 5), (5, 2), (2, 6), (6, 3), (5, 7), (6, 7), (5, 6))):
+            asta(f"rete legame {i + 1}", tuple(Vector(nodi[a_]) + Vector((0, 0, PZ))), tuple(Vector(nodi[b_]) + Vector((0, 0, PZ))), 0.02, M_BIANCO_LUCIDO)
+        # l'imbuto: i contatti entrano e diventano clienti
+        fx, fy = 2.15, -1.25
+        for i, (rb, rc, mat) in enumerate(((0.42, 0.62, magenta), (0.26, 0.42, viola), (0.13, 0.26, m_col))):
+            S(cono(f"{N} · imbuto {i + 1}", rb, rc, 0.36, (fx, fy, PZ + 1.75 - i * 0.4), mat, coll))
+        asta("imbuto piede", (fx, fy, PZ), (fx, fy, PZ + 0.78), 0.04, M_BIANCO_LUCIDO)
+        S(cilindro(f"{N} · imbuto base", 0.3, PZ, PZ + 0.05, M_BIANCO_LUCIDO, coll, fx, fy))
+        for i in range(3):   # schede contatto che scendono nell'imbuto
+            sc = gruppo(f"scheda {i + 1}", (fx - 0.5 + i * 0.42, fy - 0.1 + i * 0.1, PZ + 2.35 + i * 0.42),
+                        (math.radians(-12), math.radians(-18 + i * 16), math.radians(14 - i * 12)))
+            box(f"scheda {i + 1} carta", (0.72, 0.04, 0.44), (0, 0, 0), M_BIANCO_LUCIDO, 0.04, padre=sc)
+            S(tubo(f"{N} · scheda {i + 1} foto", (-0.2, -0.022, 0.02), (-0.2, -0.032, 0.02), 0.11, lacca("#E9336F"), coll), sc)
+            box(f"scheda {i + 1} nome", (0.3, 0.014, 0.06), (0.14, -0.026, 0.08), notte, 0.008, padre=sc)
+            box(f"scheda {i + 1} riga", (0.22, 0.014, 0.05), (0.1, -0.026, -0.05), lacca("#C9BBF2"), 0.008, padre=sc)
+        modello("mid_century_lounge_chair", f"{N} · poltrona", coll, base, (-1.85, -1.2, PZ + 0.02), math.radians(40))
+        modello("potted_plant_02", f"{N} · pianta", coll, base, (-2.65, 0.1, PZ), 2.0, altezza=1.25)
+        cima = PZ + 6.3
+
+    # faro caldo dall'alto e luce morbida davanti, che nel render non si vede
+    luce_spot(f"Faro {N}", coll, (0, -2.6, ALTEZZA - 0.4), (0, 0.3, 1.6), 16000, 34, padre=base)
+    morbida = bpy.data.lights.new(f"Luce morbida {N}", "AREA")
+    morbida.energy = 900
+    morbida.size = 4.0
+    morbida.color = (1.0, 0.95, 0.9)
+    lm = bpy.data.objects.new(f"Luce morbida {N}", morbida)
+    coll.objects.link(lm)
+    S(lm)
+    lm.location = (0, -4.6, 5.0)
+    lm.rotation_mode = "QUATERNION"
+    lm.rotation_quaternion = (Vector((0, 0.6, 2.2)) - Vector(lm.location)).to_track_quat("-Z", "Y")
+    lm.visible_camera = False
+    lm.visible_glossy = False
+
+    cime.append(base.matrix_basis @ Vector((0, 1.2, cima)))
+
+    # punto cliccabile: sul sito diventa il bollino rotante del progetto (sul bordo davanti della pedana)
+    hs = bpy.data.objects.new(f"HOTSPOT_{ID}", None)
+    hs.empty_display_type = "SPHERE"
+    hs.empty_display_size = 0.16
+    hs["titolo"] = N
+    c_hotspot.objects.link(hs)
+    hs.parent = base
+    hs.location = (0, -2.75, 0.5)
+
+# festoni di lampadine da uno stand all'altro, come alle feste
+c_festoni = collezione("Festoni di lampadine")
+for i in range(len(cime) - 1):
+    festone(f"Festone {i + 1}", cime[i], cime[i + 1], 1.1, c_festoni, lampadine=17)
+for lato, c_ in ((-1, cime[0]), (1, cime[-1])):
+    festone(f"Festone esterno {lato}", c_, (lato * (MEZZA_LARG - 0.6), -1.5, 8.5), 1.4, c_festoni, lampadine=15)
+
+# gli stampi dei modelli non servono piu': restano solo le copie messe nella stanza
+for nuovi, _, _ in _stampi.values():
+    for o in nuovi:
+        bpy.data.objects.remove(o, do_unlink=True)
+bpy.data.collections.remove(c_stampi)
+
+# ================================================================ sole e cielo vero
+sole_dati = bpy.data.lights.new("Sole", "SUN")
+sole_dati.energy = 3.4
+sole_dati.angle = math.radians(3.0)
+sole_dati.color = (1.0, 0.74, 0.5)          # luce calda da tardo pomeriggio
+sole = bpy.data.objects.new("Sole", sole_dati)
+scena.collection.objects.link(sole)
+sole.location = (-6, -12, ALTEZZA + 4)
+# entra dalla vetrata d'ingresso, alle spalle di chi guarda, e accende gli stand di fronte
+verso_luce = Vector((0.32, 0.9, -0.42)).normalized()
+sole.rotation_mode = "QUATERNION"
+sole.rotation_quaternion = verso_luce.to_track_quat("-Z", "Y")
+
+mondo = scena.world or bpy.data.worlds.new("Cielo")
+scena.world = mondo
+mondo.name = "Cielo vero (Canary Wharf)"
+if mondo.node_tree is None:
+    mondo.use_nodes = True
+# la fotografia a 360 gradi della citta' fa da cielo. Quella che si VEDE dalle vetrate ha la sua
+# luminosita', quella che ILLUMINA la stanza e' piu' forte (come una foto esposta per l'interno).
+nt = mondo.node_tree
+nt.nodes.clear()
+w_out = nt.nodes.new("ShaderNodeOutputWorld")
+w_coord = nt.nodes.new("ShaderNodeTexCoord")
+w_gira = nt.nodes.new("ShaderNodeMapping")
+w_gira.inputs["Rotation"].default_value = (0, 0, math.radians(ROT_CIELO))
+w_foto = nt.nodes.new("ShaderNodeTexEnvironment")
+w_foto.image = carica(os.path.join(RIS, "cielo", "canary_wharf.hdr"))
+nt.links.new(w_coord.outputs["Generated"], w_gira.inputs["Vector"])
+nt.links.new(w_gira.outputs["Vector"], w_foto.inputs["Vector"])
+w_luce = nt.nodes.new("ShaderNodeBackground")
+w_luce.inputs[1].default_value = LUCE_CIELO
+w_vista = nt.nodes.new("ShaderNodeBackground")
+w_vista.inputs[1].default_value = VISTA_CIELO
+nt.links.new(w_foto.outputs["Color"], w_luce.inputs[0])
+nt.links.new(w_foto.outputs["Color"], w_vista.inputs[0])
+w_raggio = nt.nodes.new("ShaderNodeLightPath")
+w_mix = nt.nodes.new("ShaderNodeMixShader")
+nt.links.new(w_raggio.outputs["Is Camera Ray"], w_mix.inputs[0])
+nt.links.new(w_luce.outputs[0], w_mix.inputs[1])
+nt.links.new(w_vista.outputs[0], w_mix.inputs[2])
+nt.links.new(w_mix.outputs[0], w_out.inputs["Surface"])
+mondo.color = colore(CIELO)[:3]
+mondo["cielo"] = CIELO   # letto dall'esportazione: e' lo sfondo del "3D dal vivo"
+
+# ================================================================ camera 360
+cam_data = bpy.data.cameras.new("Camera360")
+cam_data.type = "PANO"
+try:
+    cam_data.panorama_type = "EQUIRECTANGULAR"
+except Exception:
+    cam_data.cycles.panorama_type = "EQUIRECTANGULAR"
+cam = bpy.data.objects.new("Camera360", cam_data)
+scena.collection.objects.link(cam)
+cam.location = (0, 0, OCCHI)
+cam.rotation_euler = (math.radians(90), 0, 0)   # guarda verso +Y, cioe' il centro dell'arco
+cam["sguardo_max_gradi"] = SGUARDO_MAX          # letto dall'esportazione: limite dello sguardo sul sito
+scena.camera = cam
+
+# ================================================================ render
+scena.render.engine = "CYCLES"
+scena.render.resolution_x = 5760      # la stessa misura del panorama di engine.land
+scena.render.resolution_y = 2880
+scena.render.resolution_percentage = 100
+scena.cycles.samples = 160
+scena.cycles.use_adaptive_sampling = True
+scena.cycles.adaptive_threshold = 0.015
+scena.cycles.use_denoising = True
+scena.cycles.sample_clamp_indirect = 8.0     # niente puntini bianchi sul pavimento lucido
+scena.cycles.caustics_reflective = False
+scena.cycles.caustics_refractive = False
+try:
+    scena.cycles.device = "GPU"
+except Exception:
+    pass
+for nome_vista in ("Khronos PBR Neutral", "Standard", "AgX"):   # la prima tiene i colori dei marchi fedeli
+    try:
+        scena.view_settings.view_transform = nome_vista
+        break
+    except Exception:
+        continue
+for look in ("None",):
+    try:
+        scena.view_settings.look = look
+        break
+    except Exception:
+        continue
+
+# soffitto nel render ma non davanti agli occhi mentre lavori nella vista dall'alto
+for lc in bpy.context.view_layer.layer_collection.children:
+    if lc.name.startswith("Soffitto"):
+        lc.hide_viewport = True
+
+# vista 3D in modalita' "Anteprima materiale", cosi' si vedono subito i materiali
+for schermo_ui in bpy.data.screens:
+    for area in schermo_ui.areas:
+        if area.type == "VIEW_3D":
+            for spazio in area.spaces:
+                if spazio.type == "VIEW_3D":
+                    spazio.shading.type = "MATERIAL"
+                    spazio.clip_end = 200
+
+bpy.ops.wm.save_as_mainfile(filepath=USCITA)
+try:   # percorsi relativi: la cartella del progetto si puo' spostare senza perdere immagini
+    bpy.ops.file.make_paths_relative()
+    bpy.ops.wm.save_mainfile()
+except Exception as e:
+    print("Percorsi relativi non impostati:", e)
+print(f"\nStanza salvata in {USCITA} ({len(bpy.data.objects)} oggetti)")

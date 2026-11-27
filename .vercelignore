@@ -1,0 +1,9 @@
+# Quello che Vercel non deve ricevere quando si pubblica da questo Mac: serve solo a lavorare, non al sito online
+blender
+src/vecchie
+CLAUDE.md
+.claude
+node_modules
+dist
+public/stanza/stanza.glb
+public/stanza/cielo.jpg

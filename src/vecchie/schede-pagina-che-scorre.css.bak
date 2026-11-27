@@ -1,0 +1,615 @@
+/* Le schede dei progetti: una pagina che scorre, su fondo bianco. Il colore del progetto (--a, messo da
+   schede.js) è solo un accento. Ordine: apertura con il sito vero, «Cosa fa», immagini vere, numeri su nero,
+   chiusura. Tutto vale solo dentro .sk. La versione di prima è in src/vecchie/. */
+.pagina:has(.sk) {
+  container-type: size; /* serve a far durare l'apertura esattamente una schermata (100cqh) */
+}
+.sk {
+  --molle: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --inchiostro: #121013;
+  --tenue: rgba(18, 16, 19, 0.6);
+  --filo: rgba(18, 16, 19, 0.12);
+  --bordo: clamp(22px, 5vw, 88px);
+  --stacco: clamp(56px, 8vw, 120px);
+  --chiaro: color-mix(in srgb, var(--a) 55%, #fff);
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  color: var(--inchiostro);
+  isolation: isolate;
+}
+/* un alone leggero del colore del progetto dietro l'apertura, fermo */
+.sk::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -22vw;
+  right: -14vw;
+  width: 60vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a) 22%, transparent), transparent 64%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- 1. apertura */
+.sk-apre {
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 72px);
+  min-height: min(86vh, 900px);
+  min-height: 100cqh;
+  padding: 104px var(--bordo) clamp(28px, 4vw, 56px);
+}
+.sk-testo {
+  min-width: 0;
+}
+.sk-testo > *,
+.sk-scena {
+  animation: sk-entra 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sk-testo > :nth-child(2) { animation-delay: 0.04s; }
+.sk-testo > :nth-child(3) { animation-delay: 0.08s; }
+.sk-testo > :nth-child(4) { animation-delay: 0.12s; }
+.sk-testo > :nth-child(5) { animation-delay: 0.16s; }
+.sk-scena { animation-delay: 0.2s; }
+@keyframes sk-entra {
+  from { opacity: 0; transform: translateY(26px); filter: blur(10px); }
+}
+.sk-tag,
+.sk-etichetta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.sk-tag {
+  margin-bottom: clamp(18px, 2vw, 28px);
+}
+.sk-tag b {
+  font-weight: 700;
+  color: var(--a);
+}
+.sk-tag b::after {
+  content: "";
+  display: inline-block;
+  width: 34px;
+  height: 1px;
+  margin-left: 12px;
+  vertical-align: middle;
+  background: var(--filo);
+}
+.sk-logo img {
+  display: block;
+  height: clamp(30px, 3vw, 46px);
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+.sk-logo.con-scritta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sk-logo.con-scritta img {
+  height: clamp(40px, 3.6vw, 54px);
+  border-radius: 24%;
+}
+.sk-logo.con-scritta span {
+  font-size: clamp(18px, 1.7vw, 25px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.sk-logo.con-scritta br {
+  display: none;
+}
+.sk-logo.con-scritta b::before {
+  content: " ";
+}
+.sk-logo.con-scritta b {
+  font-weight: 600;
+  color: var(--a);
+}
+/* i titoli: lo stesso carattere dei titoloni di «Chi siamo», in maiuscolo e di misura media (grande e in
+   minuscolo all'utente faceva troppo contrasto). MAI il corsivo: la parte in evidenza cambia solo colore */
+.sk-claim,
+.sk-invito h2,
+.sk-prossimo b,
+.sk-prossimo i,
+.sk-punti b,
+.sk-forza li,
+.sk-numeri b {
+  font-family: var(--titoli);
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.sk-claim {
+  margin: clamp(18px, 2.2vw, 32px) 0 0;
+  font-size: clamp(28px, 3.5vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.sk em {
+  font-style: normal;
+  color: var(--a);
+}
+.sk-cuore {
+  display: inline-block;
+  color: var(--a);
+}
+.sk-intro {
+  max-width: 44ch;
+  margin: clamp(14px, 1.6vw, 22px) 0 0;
+  font-size: clamp(16.5px, 1.35vw, 20px);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: rgba(18, 16, 19, 0.74);
+  text-wrap: pretty;
+}
+.sk-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin: clamp(22px, 2.4vw, 34px) 0 0;
+}
+.sk-bottone {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 7px 7px 22px;
+  border-radius: 999px;
+  background: var(--inchiostro);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.3s, transform 0.3s var(--molle);
+}
+.sk-bottone span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--a);
+  transition: transform 0.3s var(--molle), background 0.3s;
+}
+.sk-bottone:hover {
+  background: var(--a);
+  transform: scale(1.03);
+}
+.sk-bottone:hover span {
+  background: #fff;
+  color: var(--a);
+  transform: rotate(45deg);
+}
+.sk-bottone.vuoto {
+  padding: 16px 4px;
+  border-radius: 0;
+  background: none;
+  color: var(--inchiostro);
+  box-shadow: inset 0 -1px 0 var(--inchiostro);
+}
+.sk-bottone.vuoto span {
+  width: auto;
+  height: auto;
+  background: none;
+  color: inherit;
+}
+
+/* la finestra con il sito vero: è lei la protagonista */
+.sk-scena {
+  min-width: 0;
+}
+.sc-vetrina {
+  --mx: 0;
+  --my: 0;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 11.2;
+  perspective: 1800px;
+}
+.vt-gruppo {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(-11deg + var(--mx) * 5deg)) rotateX(calc(5deg - var(--my) * 4deg));
+}
+.vt-finestra {
+  position: absolute;
+  inset: 4% 2% 5% 0;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(18, 16, 19, 0.08),
+    0 34px 60px -30px rgba(18, 16, 19, 0.4),
+    0 70px 130px -50px color-mix(in srgb, var(--a) 70%, #000);
+}
+.vt-barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  background: #f5f5f7;
+  border-bottom: 1px solid rgba(18, 16, 19, 0.06);
+}
+.vt-barra i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d5d5da;
+}
+.vt-barra span {
+  margin: 0 auto;
+  padding: 3px 46px;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+  color: var(--tenue);
+  transform: translateX(-18px);
+}
+.vt-vista {
+  height: calc(100% - 30px);
+  overflow: hidden;
+}
+/* la pagina vera scorre piano da cima a fondo e ritorno */
+.vt-vista img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0%;
+  animation: vt-scorre 36s cubic-bezier(0.6, 0, 0.4, 1) infinite alternate;
+}
+@keyframes vt-scorre {
+  0%, 6% { object-position: 50% 0%; }
+  94%, 100% { object-position: 50% 100%; }
+}
+/* un solo cartellino, nel colore del progetto, appoggiato sull'angolo della finestra come un adesivo */
+.vt-cartello {
+  position: absolute;
+  right: -1%;
+  top: -3%;
+  display: grid;
+  gap: 3px;
+  padding: 11px 16px 12px;
+  border-radius: 15px;
+  background: var(--a);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 18px 30px -14px color-mix(in srgb, var(--a) 75%, #000);
+  transform: translateZ(70px) translate(calc(var(--mx) * 10px), calc(var(--my) * 8px)) rotate(3deg);
+}
+.vt-cartello b {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--titoli);
+  font-size: clamp(22px, 2.3vw, 34px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.vt-cartello i {
+  font-family: "Geist Variable", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.vt-cartello span {
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.86;
+}
+.vt-cartello.solo span {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- le parti che si incontrano scorrendo */
+.sk-parte {
+  padding: var(--stacco) var(--bordo) 0;
+}
+.sk-etichetta {
+  margin-bottom: clamp(20px, 2.6vw, 36px);
+  color: var(--a);
+  font-weight: 700;
+}
+.sk-etichetta::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--filo);
+}
+/* ogni pezzo compare una volta sola, quando ci si arriva (lo accende avviaScheda in schede.js) */
+.sk .appare {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.55s ease,
+    transform 0.65s cubic-bezier(0.2, 0.9, 0.2, 1);
+  transition-delay: calc(var(--k, 0) * 70ms);
+}
+.sk .appare.visto {
+  opacity: 1;
+  transform: none;
+}
+
+/* 2. cosa fa, in tre punti */
+.sk-punti {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 48px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-punti li {
+  padding-top: 18px;
+  border-top: 2px solid var(--inchiostro);
+}
+.sk-punti i {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--a);
+}
+.sk-punti b {
+  display: block;
+  margin-top: clamp(14px, 2.2vw, 34px);
+  font-size: clamp(20px, 2.1vw, 32px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+.sk-punti p {
+  max-width: 34ch;
+  margin: 12px 0 0;
+  font-size: clamp(15.5px, 1.2vw, 17.5px);
+  line-height: 1.5;
+  color: rgba(18, 16, 19, 0.72);
+}
+
+/* 3. immagini vere: ogni riga riempie la larghezza e ogni immagine tiene le sue proporzioni */
+.sk-fila {
+  display: flex;
+  gap: clamp(10px, 1.4vw, 20px);
+}
+.sk-fila + .sk-fila {
+  margin-top: clamp(10px, 1.4vw, 20px);
+}
+.sk-fila figure {
+  flex: var(--r) 1 0;
+  min-width: 0;
+  margin: 0;
+  aspect-ratio: var(--r);
+  overflow: hidden;
+  border-radius: clamp(12px, 1.4vw, 20px);
+  background: #f5f5f7;
+  box-shadow:
+    0 0 0 1px var(--filo),
+    0 34px 60px -42px rgba(18, 16, 19, 0.5);
+}
+.sk-fila img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sk-fila.app {
+  max-width: 780px;
+  margin-inline: auto;
+}
+.sk-fila.app figure {
+  border-radius: clamp(14px, 2.6vw, 34px);
+}
+
+/* 4. i numeri, grandi, su nero */
+.sk-nero {
+  margin-top: var(--stacco);
+  padding: clamp(48px, 7vw, 104px) var(--bordo);
+  background: var(--inchiostro);
+  color: #fff;
+}
+.sk-nero .sk-etichetta {
+  color: var(--chiaro);
+}
+.sk-nero .sk-etichetta::after {
+  background: rgba(255, 255, 255, 0.2);
+}
+.sk-numeri {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: clamp(28px, 4vw, 48px) clamp(16px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sk-numeri p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+.sk-numeri b {
+  font-size: clamp(42px, 6vw, 88px);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.sk-numeri i {
+  font-style: normal;
+  font-size: clamp(15px, 1.5vw, 21px);
+  font-weight: 700;
+  color: var(--chiaro);
+}
+.sk-numeri span {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.sk-forza {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: forza;
+}
+.sk-forza li {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(12px, 2vw, 28px);
+  padding: 0.3em 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: clamp(24px, 4.4vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  counter-increment: forza;
+}
+.sk-forza li::before {
+  content: "0" counter(forza);
+  font-family: "Geist Variable", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--chiaro);
+}
+
+/* 5. chiusura: l'invito e il progetto che viene dopo */
+.sk-chiude {
+  padding: var(--stacco) var(--bordo) clamp(36px, 5vw, 64px);
+}
+.sk-invito h2 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+.sk-prossimo {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  column-gap: 20px;
+  margin-top: var(--stacco);
+  padding-top: 20px;
+  border-top: 2px solid var(--inchiostro);
+  color: var(--inchiostro);
+  text-decoration: none;
+}
+.sk-prossimo span {
+  grid-column: 1 / -1;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.sk-prossimo b,
+.sk-prossimo i {
+  font-size: clamp(28px, 5.4vw, 88px);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  transition: color 0.25s, transform 0.35s var(--molle);
+}
+.sk-prossimo:hover b,
+.sk-prossimo:hover i {
+  color: var(--a);
+}
+.sk-prossimo:hover i {
+  transform: translateX(10px);
+}
+
+/* ---------------------------------------------------------------- finestre strette, tablet e telefono */
+@media (max-width: 900px), (max-height: 560px) {
+  /* una colonna: prima il progetto (logo, titolo, frase, pulsante), subito sotto il sito */
+  .sk-apre {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: clamp(26px, 5vw, 44px);
+    min-height: 0;
+    padding-top: 84px;
+  }
+  .sc-vetrina {
+    perspective: 1400px;
+  }
+  .vt-gruppo {
+    transform: rotateY(-5deg) rotateX(3deg);
+  }
+  .vt-finestra {
+    inset: 2% 1% 3% 0;
+  }
+  .vt-cartello {
+    right: 2%;
+    top: -5%;
+    padding: 8px 12px 9px;
+    border-radius: 12px;
+    transform: translateZ(40px) rotate(3deg);
+  }
+  .vt-cartello b {
+    font-size: 20px;
+  }
+}
+@media (max-width: 700px) {
+  .sk-punti {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .sk-punti li {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    padding: 16px 0 20px;
+    border-top-width: 1px;
+  }
+  .sk-punti li:first-child {
+    border-top-width: 2px;
+  }
+  .sk-punti b,
+  .sk-punti p {
+    grid-column: 2;
+  }
+  .sk-punti b {
+    margin-top: 0;
+    font-size: 22px;
+  }
+  .sk-punti i {
+    padding-top: 5px;
+  }
+  .sk-punti p {
+    max-width: none;
+    margin-top: 8px;
+  }
+}
+@media (max-width: 520px) {
+  /* su telefono le due immagini piccole vanno una sotto l'altra, così si leggono */
+  .sk-fila:not(.app) {
+    flex-direction: column;
+  }
+  .sk-fila:not(.app) figure {
+    flex: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sk .appare {
+    opacity: 1;
+    transform: none;
+  }
+}

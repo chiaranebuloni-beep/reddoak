@@ -1,0 +1,720 @@
+/* Le schede dei progetti, «a riquadri»: fondo bianco, etichetta e titolo al centro, sotto una griglia di tessere
+   con gli angoli tondi. Il colore del progetto (--a, messo da schede.js) è un accento. Tutto vale solo dentro .sk.
+   Le versioni di prima (vetrina 3D, pagina che scorre) sono in src/vecchie/. */
+.sk {
+  --molle: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --inchiostro: #121013;
+  --tenue: rgba(18, 16, 19, 0.6);
+  --filo: rgba(18, 16, 19, 0.12);
+  position: relative;
+  min-height: 100%;
+  padding: 96px clamp(22px, 5vw, 88px) clamp(20px, 2.4vw, 36px);
+  overflow: hidden;
+  background: #fff;
+  color: var(--inchiostro);
+  isolation: isolate;
+}
+/* un alone leggero del colore del progetto dietro al titolo, fermo */
+.sk::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -24vw;
+  left: 50%;
+  width: 70vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a) 20%, transparent), transparent 64%);
+  filter: blur(30px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+/* all'apertura titolo e tessere entrano uno dopo l'altro */
+.bq-testa > *,
+.bq-t {
+  animation: sk-entra 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.bq-testa > :nth-child(2) { animation-delay: 0.05s; }
+.bq-sito { animation-delay: 0.1s; }
+.bq-grigio { animation-delay: 0.16s; }
+.bq-colore { animation-delay: 0.22s; }
+.bq-nero { animation-delay: 0.28s; }
+@keyframes sk-entra {
+  from { opacity: 0; transform: translateY(24px); filter: blur(8px); }
+}
+.sk-tag {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 clamp(18px, 2vw, 28px);
+  /* stesso carattere del resto del sito: quello "da macchina da scrivere" all'utente non c'entrava niente */
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.sk-tag b {
+  font-weight: 700;
+  color: var(--a);
+}
+.sk-tag b::after {
+  content: "";
+  display: inline-block;
+  width: 34px;
+  height: 1px;
+  margin-left: 12px;
+  vertical-align: middle;
+  background: var(--filo);
+}
+.sk-logo img {
+  display: block;
+  height: clamp(30px, 3vw, 46px);
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+.sk-logo.con-scritta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sk-logo.con-scritta img {
+  height: clamp(40px, 3.6vw, 54px);
+  border-radius: 24%;
+}
+.sk-logo.con-scritta span {
+  font-size: clamp(18px, 1.7vw, 25px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.sk-logo.con-scritta br {
+  display: none;
+}
+.sk-logo.con-scritta b::before {
+  content: " ";
+}
+.sk-logo.con-scritta b {
+  font-weight: 600;
+  color: var(--a);
+}
+.sk-cuore {
+  display: inline-block;
+  color: var(--a);
+  animation: sk-batte 1.3s ease-in-out infinite;
+}
+@keyframes sk-batte {
+  18% { transform: scale(1.2); }
+  36% { transform: scale(1); }
+}
+.sk-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin: clamp(22px, 2.4vw, 34px) 0 0;
+}
+.sk-bottone {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 7px 7px 22px;
+  border-radius: 999px;
+  background: var(--inchiostro);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.35s, transform 0.35s var(--molle);
+}
+.sk-bottone span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--a);
+  transition: transform 0.35s var(--molle), background 0.35s;
+}
+.sk-bottone:hover {
+  background: var(--a);
+  transform: scale(1.03);
+}
+.sk-bottone:hover span {
+  background: #fff;
+  color: var(--a);
+  transform: rotate(45deg);
+}
+.sk-bottone.vuoto {
+  padding: 16px 4px;
+  border-radius: 0;
+  background: none;
+  color: var(--inchiostro);
+  box-shadow: inset 0 -1px 0 var(--inchiostro);
+}
+.sk-bottone.vuoto span {
+  width: auto;
+  height: auto;
+  background: none;
+  color: inherit;
+}
+
+/* la pagina vera scorre piano da cima a fondo e ritorno */
+@keyframes vt-scorre {
+  0%, 5% { object-position: 50% 0%; }
+  95%, 100% { object-position: 50% 100%; }
+}
+
+/* ---------------------------------------------------------------- l'elemento animato davanti al sito */
+/* un pezzo di interfaccia che racconta il progetto: il quiz vero/falso, le liste «in diretta» */
+.vt-primo {
+  position: relative;
+  padding: 1.1em;
+  border-radius: 1.5em;
+  background: #fff;
+  line-height: 1.3;
+  box-shadow:
+    0 0 0 1px rgba(18, 16, 19, 0.06),
+    0 40px 70px -30px rgba(18, 16, 19, 0.55),
+    0 70px 110px -50px color-mix(in srgb, var(--a) 70%, #000);
+}
+.vt-primo p,
+.vt-primo ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vt-primo .pr-riga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  font-size: 0.92em;
+  color: var(--tenue);
+}
+.vt-primo .pr-riga b {
+  color: var(--inchiostro);
+}
+.vt-primo .pr-riga em {
+  padding: 0.25em 0.75em;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--a) 10%, #fff);
+  color: var(--a);
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Quiz Patente: la domanda */
+.pr-quiz .q-segnale {
+  display: block;
+  width: 42%;
+  margin: 1em auto 0.7em;
+  filter: drop-shadow(0 0.5em 0.6em rgba(18, 16, 19, 0.18));
+}
+.pr-quiz .q-testo {
+  min-height: 3.9em;
+  font-size: 1.04em;
+  font-weight: 500;
+  text-align: center;
+}
+.pr-quiz .q-segnale,
+.pr-quiz .q-testo {
+  transition: opacity 0.3s, transform 0.4s var(--molle);
+}
+.pr-quiz.cambia .q-segnale,
+.pr-quiz.cambia .q-testo {
+  opacity: 0;
+  transform: translateY(0.5em) scale(0.96);
+}
+.pr-quiz .q-risposte {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em;
+  margin-top: 0.7em;
+}
+.pr-quiz .q-risposte span {
+  padding: 0.7em 0;
+  border-radius: 0.9em;
+  background: color-mix(in srgb, var(--a) 9%, #fff);
+  color: var(--a);
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.35s, color 0.35s, transform 0.4s var(--molle);
+}
+.pr-quiz.risposta-vero .q-v,
+.pr-quiz.risposta-falso .q-f {
+  background: #1faa59;
+  color: #fff;
+  transform: scale(1.05);
+}
+.pr-quiz .q-punti {
+  display: flex;
+  gap: 0.35em;
+  margin-top: 0.9em;
+}
+.pr-quiz .q-punti i {
+  flex: 1;
+  height: 0.38em;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.1);
+  transition: background 0.4s;
+}
+.pr-quiz .q-punti i.ok {
+  background: #1faa59;
+}
+
+/* Relatia: i contatti in diretta */
+.pr-lead .ld-lista {
+  display: grid;
+  gap: 0.5em;
+  margin: 0.8em 0;
+}
+.pr-lead .ld-lista li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.55em 0.65em;
+  border-radius: 0.95em;
+  background: #f6f5f9;
+}
+.pr-lead .ld-lista li.mosso {
+  animation: ld-lampo 0.9s ease-out;
+}
+@keyframes ld-lampo {
+  0% { background: color-mix(in srgb, var(--a) 22%, #fff); transform: scale(1.03); }
+}
+.pr-lead .ld-lista i {
+  display: grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--a), var(--a2));
+  color: #fff;
+  font-style: normal;
+  font-size: 0.82em;
+  font-weight: 600;
+}
+.pr-lead .ld-lista span {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.86em;
+  color: var(--tenue);
+}
+.pr-lead .ld-lista span b {
+  font-size: 1.12em;
+  color: var(--inchiostro);
+}
+.pr-lead .ld-lista u {
+  white-space: nowrap;
+  padding: 0.28em 0.7em;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.07);
+  font-size: 0.82em;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.4s, color 0.4s;
+}
+.pr-lead li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a2) 16%, #fff);
+  color: var(--a2);
+}
+.pr-lead li[data-fase="2"] u {
+  background: var(--a);
+  color: #fff;
+}
+.pr-lead .ld-piede {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--filo);
+  color: var(--tenue);
+}
+.pr-lead .ld-piede b {
+  font-size: 1.7em;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--inchiostro);
+  font-variant-numeric: tabular-nums;
+}
+
+/* myPushop: i negozi vicini (stessa impostazione dei contatti di Relatia): offerta → salvata → in negozio */
+.pr-negozi .ld-lista i {
+  background: linear-gradient(135deg, var(--a), color-mix(in srgb, var(--a) 60%, var(--a2)));
+}
+.pr-negozi .ld-lista u {
+  background: color-mix(in srgb, var(--a) 9%, #fff);
+  color: var(--a);
+}
+.pr-negozi li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a) 22%, #fff);
+  color: var(--a);
+}
+
+/* Mister Lavaggio: i lavaggi della giornata, in arrivo → lavaggio → fatto */
+.pr-lavaggi li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a2) 18%, #fff);
+  color: var(--a);
+}
+
+/* meravigliä: le campagne in diretta (stessa impostazione dei contatti di Relatia, con una barra per canale) */
+.pr-campagne .ld-lista li {
+  row-gap: 0.5em;
+}
+.pr-campagne .ld-lista i {
+  background: var(--a2);
+}
+.pr-campagne .ld-lista u {
+  background: color-mix(in srgb, var(--a) 12%, #fff);
+  color: var(--a);
+  font-variant-numeric: tabular-nums;
+}
+.pr-campagne .ld-lista s {
+  grid-column: 1 / -1;
+  height: 0.32em;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.08);
+}
+.pr-campagne .ld-lista s b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--a) 45%, #fff), var(--a));
+  transform-origin: left;
+  transition: transform 0.9s var(--molle);
+}
+
+/* ================================================================ la scheda «a riquadri» (.sk.bq)
+   Come l'esempio mandato dall'utente: etichetta e titolo al centro, sotto una griglia di tessere con gli angoli
+   tondi: il sito vero con l'elemento animato davanti, una grigia con il testo, una nel colore del progetto con
+   il numero più importante, una nera con gli altri. Titolo sottile in minuscolo, come nell'esempio. */
+.sk.bq {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.2vw, 30px);
+  padding-top: 96px;
+}
+.bq-testa {
+  display: grid;
+  justify-items: center;
+  gap: clamp(10px, 1.2vw, 16px);
+  text-align: center;
+}
+.bq .sk-tag {
+  margin: 0;
+}
+.bq-claim {
+  max-width: 20ch;
+  margin: 0;
+  font-size: clamp(28px, 4.1vw, 64px);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.052em;
+  text-wrap: balance;
+}
+.bq-claim em {
+  font-style: normal;
+  color: var(--a);
+}
+.bq-griglia {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* a sinistra il sito, alto quanto tutta la griglia; a destra, sopra, il riquadro del testo (alto solo quanto
+     serve al suo testo: all'utente quello grande, con il vuoto sopra, non piaceva) e sotto i due dei numeri */
+  grid-template-columns: 1.12fr 1fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(10px, 1.2vw, 18px);
+}
+.bq-t {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: clamp(14px, 1.7vw, 26px);
+  overflow: hidden;
+  border-radius: clamp(16px, 1.9vw, 28px);
+  list-style: none;
+}
+.bq-etichetta {
+  margin: 0;
+  font-size: clamp(12.5px, 1vw, 15px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--tenue);
+}
+.bq-etichetta::first-letter {
+  text-transform: uppercase;
+}
+/* 1. il sito vero che scorre, con il logo in alto e l'elemento animato in basso */
+.bq-sito {
+  grid-row: 1 / 3;
+  padding: 0;
+  background: #ececef;
+  box-shadow: inset 0 0 0 1px var(--filo);
+}
+.bq-pagina {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0%;
+  animation: vt-scorre 40s cubic-bezier(0.6, 0, 0.4, 1) infinite alternate;
+}
+.bq-logo {
+  position: absolute;
+  top: clamp(10px, 1.2vw, 16px);
+  left: clamp(10px, 1.2vw, 16px);
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 24px -12px rgba(18, 16, 19, 0.5);
+}
+.bq-logo .sk-logo img {
+  height: clamp(20px, 1.8vw, 28px);
+}
+.bq-logo .sk-logo.con-scritta img {
+  height: clamp(26px, 2.2vw, 34px);
+}
+.bq-logo .sk-logo.con-scritta span {
+  font-size: clamp(14px, 1.2vw, 17px);
+}
+.bq-davanti {
+  position: absolute;
+  left: clamp(10px, 1.2vw, 16px);
+  right: clamp(10px, 1.2vw, 16px);
+  bottom: clamp(10px, 1.2vw, 16px);
+  font-size: clamp(8.5px, 1.5cqh, 13.5px);
+}
+.bq-davanti .vt-primo {
+  border-radius: clamp(12px, 1.4vw, 20px);
+}
+/* 2. grigia: il testo completo e i pulsanti */
+.bq-grigio {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-direction: column;
+  background: #f3f3f5;
+}
+.bq-desc {
+  max-width: 66ch;
+  margin: clamp(8px, 1vw, 14px) 0 0;
+  font-size: clamp(14.5px, 1.25vw, 19px);
+  line-height: 1.42;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+.bq-grigio .sk-azioni {
+  margin-top: clamp(14px, 1.6vw, 22px);
+}
+/* 3. nel colore del progetto: il numero che conta di più */
+.bq-colore {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--a);
+  color: #fff;
+}
+.bq-colore .bq-etichetta {
+  color: rgba(255, 255, 255, 0.86);
+}
+.bq-numero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+.bq-numero b {
+  font-size: clamp(40px, 5.4vw, 84px);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+.bq-numero > i {
+  font-style: normal;
+  font-size: clamp(15px, 1.5vw, 22px);
+  font-weight: 500;
+}
+.bq-parola {
+  margin: 0;
+  font-size: clamp(22px, 2.8vw, 42px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+/* 4. nera: gli altri numeri, uno per riga */
+.bq-nero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--inchiostro);
+  color: #fff;
+}
+.bq-nero li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.55em 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.bq-nero li:first-child {
+  border-top: 0;
+}
+.bq-nero li > span {
+  font-size: clamp(12.5px, 1vw, 14.5px);
+  color: rgba(255, 255, 255, 0.74);
+}
+.bq-nero li > span::first-letter {
+  text-transform: uppercase;
+}
+.bq-nero p {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  white-space: nowrap;
+}
+.bq-nero b {
+  font-size: clamp(21px, 2.5vw, 38px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.bq-nero p > i {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--a) 50%, #fff);
+}
+.bq-nero p.parola {
+  font-size: clamp(15px, 1.5vw, 21px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: normal;
+}
+@media (max-width: 900px), (max-height: 600px) {
+  /* alla misura stretta (l'utente guarda l'anteprima a 620 punti) stessa griglia, più compatta: una schermata */
+  .sk.bq {
+    gap: 12px;
+    padding-top: 74px;
+    padding-bottom: 14px;
+  }
+  .bq-claim {
+    font-size: clamp(26px, 5vw, 34px);
+  }
+  .bq-griglia {
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+  }
+  .bq-desc {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .bq-grigio .sk-azioni {
+    gap: 6px 14px;
+    margin-top: 12px;
+  }
+  .bq-grigio .sk-bottone {
+    font-size: 14.5px;
+  }
+  .bq-numero {
+    flex-wrap: wrap;
+    gap: 2px 6px;
+  }
+  .bq-numero b {
+    font-size: 46px;
+  }
+  /* nel riquadro nero stretto: prima il numero, grande, e sotto la sua scritta */
+  .bq-nero li {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 0.5em 0;
+  }
+  .bq-nero b {
+    font-size: 28px;
+  }
+  .bq-nero li > span {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+}
+@media (max-width: 520px) {
+  /* su telefono le tessere vanno una sotto l'altra */
+  .bq-griglia {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+  .bq-sito {
+    grid-row: auto;
+    height: 440px;
+  }
+  .bq-grigio {
+    grid-column: auto;
+  }
+  .bq-davanti {
+    font-size: 11.5px;
+  }
+  .bq-nero li {
+    flex-direction: row;
+    align-items: baseline;
+  }
+  .bq-nero li > span {
+    font-size: 13.5px;
+  }
+}
+
+/* ---------------------------------------------------------------- i numeri che girano, come un contatore */
+/* Ogni cifra è una colonna con i numeri da 0 a 9 ripetuti: all'apertura (classe .partiti, messa da schede.js)
+   scorre veloce e si ferma sulla cifra giusta, una dopo l'altra. Richiesta dell'utente: i numeri devono
+   muoversi molto, girare, sembrare importanti. */
+.giri {
+  display: inline-flex;
+  line-height: 1;
+}
+.rl {
+  display: block;
+  height: 1em;
+  overflow: hidden;
+}
+.rl-n {
+  display: block;
+  transition: transform 2.4s cubic-bezier(0.12, 0.86, 0.14, 1);
+  transition-delay: calc(0.25s + var(--k) * 0.14s);
+  will-change: transform;
+}
+.rl-n span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  text-align: center;
+}
+.partiti .rl-n {
+  transform: translateY(calc((30 + var(--d)) * -1em));
+}
+
+/* ---------------------------------------------------------------- finestre strette, tablet e telefono */
+.pagina:has(.sk) {
+  container-type: size; /* per misurare la vetrina sull'altezza della pagina (cqh) */
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk *,
+  .sk::before,
+  .sk::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

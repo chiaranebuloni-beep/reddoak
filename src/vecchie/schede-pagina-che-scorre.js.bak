@@ -1,0 +1,184 @@
+// Le schede dei progetti (si aprono con «VAI!»): una pagina che scorre, su fondo bianco.
+//   1. apertura: etichetta, logo, titolo, una frase, pulsanti e il SITO VERO che scorre in una finestra grande
+//   2. «Cosa fa» in tre punti
+//   3. immagini vere del prodotto (ritagli del sito, o schermate dell'app)
+//   4. i numeri, grandi, su una fascia nera
+//   5. chiusura: pulsante e progetto successivo
+// Testi e colori sono in src/schede-dati.js, lo stile in src/schede.css.
+// La versione di prima (una schermata sola, con le liste «in diretta» inventate davanti al sito) è in src/vecchie/.
+import { progetti } from "./progetti.js";
+import { schede } from "./schede-dati.js";
+
+const stringi = (v, a, b) => Math.min(b, Math.max(a, v));
+const fermo = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const pulito = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+// Il progetto che viene dopo (lo usano la chiusura della scheda e la barra in basso).
+export function prossimoProgetto(id) {
+  const ids = Object.keys(progetti);
+  return ids[(ids.indexOf(id) + 1) % ids.length];
+}
+
+// ------------------------------------------------------------------ i pezzi della pagina
+const numero = (st) => `<p><b data-n="${st.plain ? "" : st.n}">${st.plain ?? "0"}</b><i>${pulito(st.unit)}</i></p><span>${pulito(st.label)}</span>`;
+
+const pulsanti = (s) =>
+  s.bottoni
+    .map((b) => `<a class="sk-bottone${b.vuoto ? " vuoto" : ""}" href="${pulito(b.url)}" target="_blank" rel="noopener noreferrer">${pulito(b.testo)} <span aria-hidden="true">↗</span></a>`)
+    .join("");
+
+// La finestra con la pagina vera che scorre da sola, e sopra un solo cartellino con il numero che conta di più.
+function finestra(id, s) {
+  const dominio = new URL(s.bottoni[0].url).hostname.replace(/^www\./, "");
+  const primo = s.stats?.[0];
+  const cartello = primo
+    ? `<div class="vt-cartello"><b>${pulito(primo.plain ?? primo.n)}<i>${pulito(primo.unit)}</i></b><span>${pulito(primo.label)}</span></div>`
+    : s.cartello
+      ? `<div class="vt-cartello solo"><span>${pulito(s.cartello)}</span></div>`
+      : "";
+  return `
+    <div class="sk-scena"><div class="sc-vetrina" aria-hidden="true"><div class="vt-gruppo">
+      <div class="vt-finestra">
+        <div class="vt-barra"><i></i><i></i><i></i><span>${pulito(dominio)}</span></div>
+        <div class="vt-vista"><img src="/progetti/pagina-${id}.webp" alt="" /></div>
+      </div>
+      ${cartello}
+    </div></div></div>`;
+}
+
+// Le immagini vere: una grande e sotto due affiancate, ognuna con le sue proporzioni (così non viene tagliato
+// niente); per le app, tre schermate in fila.
+function galleria(id, s) {
+  const pezzo = ([w, h], i) =>
+    `<figure class="appare" style="--r:${(w / h).toFixed(3)}"><img src="/progetti/pezzo-${id}-${i + 1}.webp" width="${w}" height="${h}" loading="lazy" alt="" /></figure>`;
+  const m = s.foto.misure;
+  if (s.foto.app) return `<div class="sk-fila app">${m.map(pezzo).join("")}</div>`;
+  return `<div class="sk-fila">${pezzo(m[0], 0)}</div><div class="sk-fila">${m.slice(1).map((x, i) => pezzo(x, i + 1)).join("")}</div>`;
+}
+
+// ------------------------------------------------------------------ la scheda
+export function htmlScheda(id) {
+  const p = progetti[id];
+  const s = schede[id];
+  if (!p || !s) return null;
+  const ids = Object.keys(progetti);
+  const posto = String(ids.indexOf(id) + 1).padStart(2, "0");
+  const dopo = prossimoProgetto(id);
+  const claim = s.claim
+    .map((c) => (c === "br" ? "<br />" : c === "heart" ? '<span class="sk-cuore">♥</span>' : c.em ? `<em>${pulito(c.em)}</em>` : pulito(c)))
+    .join("");
+  const logo = s.logo.scritta
+    ? `<div class="sk-logo con-scritta"><img src="${s.logo.src}" alt="" /><span>${pulito(s.logo.scritta[0])}<br /><b>${pulito(s.logo.scritta[1])}</b></span></div>`
+    : `<div class="sk-logo"><img src="${s.logo.src}" alt="${pulito(p.nome)}" /></div>`;
+  return {
+    titolo: p.nome,
+    colore: "#ffffff",
+    inchiostro: "#14110f",
+    html: `
+      <article class="sk" data-id="${id}" style="--a:${s.accento};--a2:${s.secondo}">
+        <header class="sk-apre">
+          <div class="sk-testo">
+            <p class="sk-tag"><b>${posto}</b>${pulito(s.tag)}</p>
+            ${logo}
+            <h1 class="sk-claim">${claim}</h1>
+            <p class="sk-intro">${pulito(s.intro)}</p>
+            <p class="sk-azioni">${pulsanti(s)}</p>
+          </div>
+          ${finestra(id, s)}
+        </header>
+
+        <section class="sk-parte">
+          <h2 class="sk-etichetta appare">Cosa fa</h2>
+          <ol class="sk-punti">
+            ${s.punti.map(([t, d], i) => `<li class="appare" style="--k:${i}"><i>0${i + 1}</i><b>${pulito(t)}</b><p>${pulito(d)}</p></li>`).join("")}
+          </ol>
+        </section>
+
+        <section class="sk-parte sk-galleria">
+          <h2 class="sk-etichetta appare">${s.foto.app ? "Dentro l'app" : "Dal sito"}</h2>
+          ${galleria(id, s)}
+        </section>
+
+        <section class="sk-nero">
+          <h2 class="sk-etichetta appare">${s.stats ? "I numeri" : "In breve"}</h2>
+          ${
+            s.stats
+              ? `<ul class="sk-numeri">${s.stats.map((st, i) => `<li class="appare" style="--k:${i}">${numero(st)}</li>`).join("")}</ul>`
+              : `<ul class="sk-forza">${s.forza.map((f, i) => `<li class="appare" style="--k:${i}">${pulito(f)}</li>`).join("")}</ul>`
+          }
+        </section>
+
+        <footer class="sk-chiude">
+          <div class="sk-invito appare">
+            <h2>${s.foto.app ? "Provala <em>sul tuo telefono.</em>" : "Guardalo <em>dal vivo.</em>"}</h2>
+            <p class="sk-azioni">${pulsanti(s)}</p>
+          </div>
+          <a class="sk-prossimo appare" href="#/progetto/${dopo}"><span>Prossimo progetto</span><b>${pulito(progetti[dopo].nome)}</b><i aria-hidden="true">→</i></a>
+        </footer>
+      </article>`,
+  };
+}
+
+// ------------------------------------------------------------------ movimento
+// La finestra si inclina appena verso il mouse. Senza mouse resta ferma: niente ondeggiamenti continui.
+function seguiPuntatore(radice, scena) {
+  let mx = 0;
+  let my = 0;
+  let tx = 0;
+  let ty = 0;
+  let inMoto = false;
+  const passo = () => {
+    mx += (tx - mx) * 0.08;
+    my += (ty - my) * 0.08;
+    scena.style.setProperty("--mx", mx.toFixed(3));
+    scena.style.setProperty("--my", my.toFixed(3));
+    inMoto = radice.isConnected && Math.abs(tx - mx) + Math.abs(ty - my) > 0.002;
+    if (inMoto) requestAnimationFrame(passo);
+  };
+  radice.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse" || fermo()) return;
+    const r = radice.getBoundingClientRect();
+    tx = stringi(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
+    ty = stringi(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
+    if (!inMoto) {
+      inMoto = true;
+      requestAnimationFrame(passo);
+    }
+  });
+}
+
+// I numeri salgono da zero la prima volta che entrano nello schermo.
+function sali(elenco) {
+  const numeri = [...elenco.querySelectorAll("b[data-n]")].filter((b) => b.dataset.n !== "");
+  const inizio = performance.now();
+  const passo = (t) => {
+    if (!elenco.isConnected) return;
+    const p = fermo() ? 1 : stringi((t - inizio) / 1400, 0, 1);
+    for (const b of numeri) b.textContent = Math.round(Number(b.dataset.n) * (1 - Math.pow(1 - p, 3))).toLocaleString("it-IT");
+    if (p < 1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+
+// Da chiamare dopo aver messo la scheda nella pagina: "radice" è l'<article>, che sta dentro la pagina che scorre.
+export function avviaScheda(radice) {
+  if (!schede[radice.dataset.id]) return;
+  const scena = radice.querySelector(".sc-vetrina");
+  if (scena) seguiPuntatore(radice.querySelector(".sk-apre"), scena);
+  // ogni pezzo compare (una volta sola) quando ci si arriva scorrendo
+  const guardia = new IntersectionObserver(
+    (voci) => {
+      for (const v of voci) {
+        if (!v.isIntersecting) continue;
+        v.target.classList.add("visto");
+        if (v.target.parentElement?.classList.contains("sk-numeri") && !v.target.parentElement.dataset.fatto) {
+          v.target.parentElement.dataset.fatto = "1";
+          sali(v.target.parentElement);
+        }
+        guardia.unobserve(v.target);
+      }
+    },
+    { root: radice.parentElement, rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+  );
+  radice.querySelectorAll(".appare").forEach((el) => guardia.observe(el));
+}

@@ -1,0 +1,1183 @@
+@import "@fontsource-variable/geist";
+
+:root {
+  --rosso: #fb0020;
+  --carta: #ffffff;
+  --inchiostro: #14110f;
+  --tenue: rgba(20, 17, 15, 0.62);
+  --ombra: 0 6px 24px rgba(40, 24, 10, 0.1);
+  /* carattere dei titoloni: per cambiarlo basta questa riga */
+  --titoli: "Geist Variable", system-ui, sans-serif;
+  /* cornice attorno al riquadro della stanza (come engine.land) */
+  --alto: 42px;
+  --basso: 66px;
+  --lato: 14px;
+  --raggio: 30px;
+  --molla: cubic-bezier(0.76, 0, 0.24, 1);
+  font-family: "Geist Variable", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--rosso);
+  color: var(--inchiostro);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
+a {
+  color: inherit;
+}
+[hidden] {
+  display: none !important;
+}
+/* niente corsivi, da nessuna parte (richiesta dell'utente): le parti in evidenza si distinguono solo per il colore */
+em,
+i,
+cite,
+address {
+  font-style: normal;
+}
+
+/* ---------------------------------------------------------------- schermata di caricamento */
+.caricamento {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2.4vh, 28px);
+  overflow: hidden;
+  background: var(--rosso);
+  color: #fff;
+  transition: transform 0.7s var(--molla);
+}
+.caricamento.via {
+  transform: translateY(-101%);
+}
+.motto {
+  margin: 0;
+  font-family: var(--titoli);
+  font-size: clamp(40px, 11.6vw, 236px);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.motto span {
+  display: block;
+  overflow: hidden;
+  padding: 0.04em 0.06em 0.02em;
+}
+.motto b {
+  display: inline-block;
+  font-weight: inherit;
+  transform: translateY(110%);
+  animation: sale 0.8s cubic-bezier(0.2, 0.9, 0.2, 1) 0.15s forwards;
+}
+.motto span + span b {
+  animation-delay: 0.28s;
+}
+.puntini {
+  display: inline-flex;
+  gap: 0.09em;
+  margin-left: 0.12em;
+}
+.puntini u {
+  width: 0.15em;
+  height: 0.15em;
+  background: currentColor;
+  animation: puntino 1s steps(1) infinite;
+}
+.puntini u + u {
+  animation-delay: 0.5s;
+}
+/* la ghianda che ruota: 60 fotogrammi in una griglia 10 × 6, fatti scorrere come un filmato */
+/* la ghianda che ruota, disegnata con i caratteri (ASCII art): la riempie lo script in index.html */
+.ghianda {
+  opacity: 0;
+  animation: compare 0.5s ease 0.5s forwards;
+}
+.ascii {
+  margin: 0;
+  color: #fff;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: clamp(5px, min(0.8vw, 1.2vh), 11px);   /* piccola: sta tutta sotto il motto, anche su schermi bassi */
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: pre;
+  user-select: none;
+  animation: galleggia 3s ease-in-out infinite;
+}
+@keyframes sale {
+  to {
+    transform: none;
+  }
+}
+@keyframes puntino {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes compare {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes giro-x {
+  to {
+    background-position-x: calc(var(--g) * -10);
+  }
+}
+@keyframes giro-y {
+  to {
+    background-position-y: calc(var(--g) * -6);
+  }
+}
+@keyframes galleggia {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -7%;
+  }
+}
+@keyframes ombra {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleX(0.78);
+    opacity: 0.7;
+  }
+}
+
+/* ---------------------------------------------------------------- cornice: nastro, riquadro, fondo */
+.nastro {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: calc(var(--alto) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+  /* stesso carattere dei titoloni di «Chi siamo»: pesante, stretto, non tutto maiuscolo */
+  font-family: var(--titoli);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  user-select: none;
+}
+.nastro-testo {
+  display: flex;
+  flex: none;
+  animation: nastro 48s linear infinite;
+}
+.nastro-testo span {
+  padding-right: 72px;
+}
+@keyframes nastro {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.riquadro {
+  position: fixed;
+  top: calc(var(--alto) + env(safe-area-inset-top));
+  right: max(var(--lato), env(safe-area-inset-right));
+  bottom: calc(var(--basso) + env(safe-area-inset-bottom));
+  left: max(var(--lato), env(safe-area-inset-left));
+  overflow: hidden;
+  border-radius: var(--raggio);
+  background: #d9d0c4;
+  isolation: isolate;
+}
+.fondo {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: calc(var(--basso) + env(safe-area-inset-bottom));
+  padding: 0 calc(var(--lato) + 12px) env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  color: #fff;
+}
+.fondo-voce {
+  justify-self: start;
+  overflow: hidden;
+  max-width: 100%;
+  font-family: var(--titoli);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.fondo-voce.destra {
+  justify-self: end;
+}
+.fondo-voce:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 5px;
+}
+/* le tre righe che aprono il menu */
+.righe {
+  display: grid;
+  gap: 8px;
+  width: min(210px, 34vw);
+  padding: 10px 0;
+}
+.righe i {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: #fff;
+  transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.righe:hover i:nth-child(1) {
+  transform: scaleX(0.82);
+}
+.righe:hover i:nth-child(3) {
+  transform: scaleX(0.64);
+}
+
+#scena {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+#scena.presa {
+  cursor: grabbing;
+}
+/* passaggio da una vista all'altra: la foto sfuma un attimo */
+#scena {
+  transition: opacity 0.28s ease;
+}
+#scena.velata {
+  opacity: 0;
+}
+
+/* ---------------------------------------------------------------- logo e modalità, dentro il riquadro */
+.logo {
+  position: absolute;
+  z-index: 12;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  padding: 12px 20px;
+  background: var(--carta);
+  border-radius: 999px;
+  box-shadow: var(--ombra);
+}
+.logo img {
+  display: block;
+  height: 22px;
+}
+.logo {
+  transition: opacity 0.25s;
+}
+.scorsa .logo {
+  opacity: 0;
+  pointer-events: none;
+}
+.modi {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  padding: 4px;
+  background: var(--carta);
+  border-radius: 999px;
+  box-shadow: var(--ombra);
+}
+.modi button {
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--tenue);
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+.modi button.attivo {
+  background: var(--inchiostro);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- punti cliccabili */
+#punti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+/* bollino rotante: sigillo «VAI!» con il nome del progetto che gira attorno */
+.punto {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 138px;
+  height: 138px;
+  padding: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  will-change: transform;
+  filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.45));
+  transition: opacity 0.25s;
+}
+.punto.nascosto {
+  opacity: 0;
+  pointer-events: none;
+}
+.punto svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transition: transform 0.4s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+.punto:hover svg,
+.punto:focus-visible svg {
+  transform: scale(1.14) rotate(-6deg);
+}
+.punto:active svg {
+  transform: scale(0.96);
+}
+.punto .giro {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  /* la scritta gira solo quando ci si passa sopra: cinque bollini che ruotano sempre davano fastidio */
+  animation: gira 16s linear infinite paused;
+}
+.punto:hover .giro,
+.punto:focus-visible .giro {
+  animation-play-state: running;
+}
+.punto .giro text {
+  font-family: var(--titoli);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  fill: #fff;
+}
+.punto .sigillo {
+  fill: var(--rosso);
+  stroke: var(--rosso);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.punto .vai-testo {
+  font-family: var(--titoli);
+  font-size: 35px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  fill: #fff;
+}
+/* nella hall il sigillo dice «VAI!», davanti allo stand dice «SCOPRI» */
+.punto .vai-testo.scopri {
+  display: none;
+  font-size: 22px;
+}
+.da-vicino .punto .vai-testo {
+  display: none;
+}
+.da-vicino .punto .vai-testo.scopri {
+  display: block;
+}
+.da-vicino .punto {
+  width: 168px;
+  height: 168px;
+}
+@keyframes gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.suggerimento {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 17, 15, 0.72);
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+.suggerimento.via {
+  opacity: 0;
+}
+/* le frecce ai lati della hall */
+.freccia {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--carta);
+  color: var(--inchiostro);
+  box-shadow: var(--ombra);
+  font-family: var(--titoli);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    opacity 0.3s,
+    transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1),
+    background 0.2s,
+    color 0.2s;
+}
+.freccia.sinistra {
+  left: 18px;
+}
+.freccia.destra {
+  right: 18px;
+}
+.freccia:hover {
+  background: var(--rosso);
+  color: #fff;
+  transform: scale(1.1);
+}
+.freccia:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+.da-vicino .freccia {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- pagine dentro il riquadro */
+.pagina {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  background: var(--c, var(--rosso));
+  color: var(--i, #fff);
+  transform: translateY(101%);
+  transition: transform 0.5s var(--molla);
+}
+.pagina.aperta {
+  transform: none;
+}
+.indietro {
+  position: absolute;
+  z-index: 12;
+  top: 18px;
+  left: 18px;
+  padding: 13px 18px;
+  border-radius: 999px;
+  background: var(--carta);
+  box-shadow: var(--ombra);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.con-pagina .modi,
+.con-pagina .suggerimento,
+.con-pagina #punti {
+  visibility: hidden;
+}
+.foglio {
+  padding: 132px clamp(20px, 5vw, 72px) 0;
+}
+.occhiello {
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.titolone {
+  margin: 0;
+  font-family: var(--titoli);
+  font-size: clamp(44px, 9.4vw, 168px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+.titolone span {
+  display: block;
+  overflow: hidden;
+  padding: 0.04em 0.05em 0.1em 0;
+  margin-bottom: -0.1em;
+}
+.titolone b {
+  display: inline-block;
+  font-weight: inherit;
+  transform: translateY(112%);
+  transition: transform 0.65s cubic-bezier(0.2, 0.9, 0.2, 1) 0.18s;
+}
+.titolone span + span b {
+  transition-delay: 0.25s;
+}
+.pagina.aperta .titolone b {
+  transform: none;
+}
+.sommario {
+  max-width: 34ch;
+  margin: 34px 0 0;
+  font-size: clamp(19px, 2vw, 28px);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+.due {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: center;
+  margin-top: clamp(40px, 6vw, 84px);
+}
+.finestra {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.3);
+}
+.finestra-barra {
+  display: flex;
+  gap: 7px;
+  padding: 11px 14px;
+  background: #ececee;
+}
+.finestra-barra i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c9c9ce;
+}
+.finestra img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1440 / 760;
+  object-fit: cover;
+  object-position: left top;
+}
+.racconto p {
+  margin: 0;
+  font-size: clamp(17px, 1.5vw, 22px);
+  line-height: 1.5;
+}
+.azioni {
+  margin-top: 28px !important;
+}
+.bottone {
+  display: inline-block;
+  padding: 16px 24px;
+  border-radius: 999px;
+  background: var(--i, #fff);
+  color: var(--c, var(--rosso));
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.bottone:hover {
+  transform: scale(1.05);
+}
+.bottone.chiaro {
+  background: color-mix(in srgb, var(--i, #fff) 16%, transparent);
+  color: var(--i, #fff);
+}
+/* i numeri grandi, in colonne separate da una riga */
+.cifre {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin: clamp(48px, 7vw, 96px) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 2px solid color-mix(in srgb, currentColor 40%, transparent);
+}
+.cifre li {
+  padding: 28px 24px 30px 0;
+}
+.cifre li + li {
+  padding-left: 28px;
+  border-left: 2px solid color-mix(in srgb, currentColor 40%, transparent);
+}
+.cifre b {
+  display: block;
+  font-family: var(--titoli);
+  font-size: clamp(44px, 6.4vw, 104px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+}
+.cifre span {
+  display: block;
+  margin-top: 14px;
+  font-size: 17px;
+}
+/* la scritta gigante che scorre */
+.scorre {
+  overflow: hidden;
+  margin: clamp(40px, 6vw, 84px) calc(clamp(20px, 5vw, 72px) * -1) 0;
+  color: var(--inchiostro);
+  font-family: var(--titoli);
+  font-size: clamp(64px, 12vw, 190px);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+}
+.scorre > div {
+  display: flex;
+  width: max-content;
+  animation: nastro 38s linear infinite;
+}
+.scorre span,
+.scorre i {
+  padding-right: 0.22em;
+  font-style: normal;
+}
+.foglio-progetto .scorre {
+  color: color-mix(in srgb, var(--i) 22%, transparent);
+}
+/* fascia chiara: la storia dal 2014 e i tre valori, come nel primo sito Reddoak */
+.chiaro-fascia {
+  margin: clamp(48px, 7vw, 100px) calc(clamp(20px, 5vw, 72px) * -1) 0;
+  padding: clamp(56px, 7vw, 104px) clamp(20px, 5vw, 72px) clamp(64px, 8vw, 120px);
+  background: #f2eee6;
+  color: var(--inchiostro);
+}
+.storia {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 110px);
+  align-items: center;
+}
+.storia-anno .occhiello {
+  margin-bottom: 10px;
+}
+.anno {
+  margin: 0;
+  font-family: var(--titoli);
+  font-size: clamp(72px, 10.5vw, 176px);
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+.storia-testo {
+  max-width: 620px;
+}
+.storia h2 {
+  margin: 0 0 20px;
+  font-family: var(--titoli);
+  font-size: clamp(24px, 2.5vw, 38px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+.storia-testo p {
+  margin: 0 0 14px;
+  font-size: clamp(16px, 1.25vw, 18px);
+  line-height: 1.55;
+  color: var(--tenue);
+}
+.storia-testo p:last-child {
+  margin-bottom: 0;
+}
+/* i tre valori: schede di colore diverso, un po' storte, attaccate con il nastro adesivo */
+.valori {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(14px, 2vw, 28px);
+  margin-top: clamp(56px, 6vw, 96px);
+}
+.valori article {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: clamp(240px, 22vw, 320px);
+  padding: clamp(22px, 2.4vw, 34px);
+  border-radius: 26px;
+  background: #fff;
+  color: var(--inchiostro);
+  box-shadow: 0 18px 40px rgba(60, 40, 20, 0.1);
+  transform: rotate(-1.4deg);
+  transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.valori article:nth-child(2) {
+  background: var(--rosso);
+  color: #fff;
+  transform: rotate(1deg) translateY(18px);
+}
+.valori article:nth-child(3) {
+  background: var(--inchiostro);
+  color: #fff;
+  transform: rotate(-0.6deg);
+}
+.valori article:hover {
+  transform: rotate(0deg) scale(1.03);
+}
+.nastro-adesivo {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  width: clamp(110px, 12vw, 160px);
+  height: 42px;
+  margin-left: calc(clamp(110px, 12vw, 160px) / -2);
+  background: rgba(251, 0, 32, 0.82);
+  transform: rotate(-3deg);
+}
+.valori article:nth-child(2) .nastro-adesivo {
+  background: rgba(20, 17, 15, 0.82);
+  transform: rotate(1.5deg);
+}
+.valori article:nth-child(3) .nastro-adesivo {
+  transform: rotate(-2deg);
+}
+.valori span {
+  font-family: var(--titoli);
+  font-size: 18px;
+  font-weight: 900;
+  opacity: 0.45;
+}
+.valori h3 {
+  margin: auto 0 12px;
+  padding-top: 40px;
+  font-family: var(--titoli);
+  font-size: clamp(28px, 2.9vw, 44px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+.valori p {
+  margin: 0;
+  font-size: clamp(15px, 1.15vw, 17px);
+  line-height: 1.5;
+  opacity: 0.85;
+}
+/* il saluto finale: frase grande, contatti e la scritta reddoak a tutta larghezza */
+.saluto {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 80px);
+  align-items: center;
+  padding: clamp(64px, 9vw, 140px) 0 28px;
+}
+.saluto h2 {
+  margin: 0;
+  font-family: var(--titoli);
+  font-size: clamp(40px, 6.6vw, 112px);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+.saluto dl {
+  margin: 0;
+}
+.saluto dt {
+  margin-top: 26px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.saluto dt:first-child {
+  margin-top: 0;
+}
+.saluto dd {
+  margin: 6px 0 0;
+  font-size: clamp(19px, 1.9vw, 26px);
+}
+.saluto a {
+  text-decoration: none;
+}
+.saluto a:hover {
+  text-decoration: underline;
+}
+.scritta-reddoak {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  margin-top: clamp(28px, 5vw, 72px);
+  filter: brightness(0) invert(1);
+}
+.legale {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+.legale a {
+  text-decoration: underline;
+}
+.piede {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: clamp(36px, 5vw, 64px) 0 40px;
+}
+
+/* ---------------------------------------------------------------- menu a tutto schermo */
+.menu {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: max(24px, env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom));
+  background: var(--rosso);
+  color: #fff;
+  transform: translateY(101%);
+  transition: transform 0.42s var(--molla);
+}
+.menu.aperto {
+  transform: none;
+}
+.menu-logo {
+  flex: none;
+  padding: 14px 24px;
+  border-radius: 999px;
+  background: #fff;
+}
+.menu-logo img {
+  display: block;
+  height: 26px;
+}
+.menu-voci {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-content: safe center;
+  gap: clamp(40px, 8vw, 140px);
+  overflow-y: auto;
+  padding: 18px 0;
+  scrollbar-width: none;
+}
+/* due gruppi affiancati: i progetti a sinistra, Reddoak a destra, divisi da un filo */
+.menu-gruppo {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2.2vh, 26px);
+}
+.menu-gruppo + .menu-gruppo {
+  padding-left: clamp(40px, 8vw, 140px);
+  border-left: 2px solid rgba(255, 255, 255, 0.35);
+}
+.menu-titolo {
+  margin: 0 0 clamp(4px, 1vh, 12px);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+.menu-voci a {
+  display: block;
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.42s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.menu.aperto .menu-voci a {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(0.12s + var(--n) * 0.03s);
+}
+.menu-voci b {
+  display: block;
+  font-family: var(--titoli);
+  font-size: clamp(26px, 4.7vh, 58px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.menu-voci a:hover b {
+  transform: scale(1.07) rotate(-1.5deg);
+}
+.menu-voci span {
+  display: block;
+  margin-top: 5px;
+  color: var(--inchiostro);
+  font-size: clamp(12px, 1.7vh, 18px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.menu-chiudi {
+  position: relative;
+  flex: none;
+  width: min(300px, 62vw);
+  height: 62px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+.menu-chiudi i {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 3px;
+  background: #fff;
+  transform: rotate(9deg);
+}
+.menu-chiudi i + i {
+  transform: rotate(-9deg);
+}
+
+/* ---------------------------------------------------------------- avviso */
+.avviso {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 48px);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--carta);
+  box-shadow: var(--ombra);
+  font-size: 14px;
+  text-align: center;
+  transition: opacity 0.4s;
+}
+.avviso.via {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- telefono */
+@media (max-width: 700px) {
+  :root {
+    --alto: 34px;
+    --basso: 56px;
+    --lato: 8px;
+    --raggio: 22px;
+  }
+  .nastro {
+    font-size: 15px;
+  }
+  .logo {
+    top: 12px;
+    left: 12px;
+    transform: none;
+    padding: 11px 14px;
+  }
+  .logo img {
+    height: 16px;
+  }
+  .modi {
+    top: 12px;
+    right: 12px;
+  }
+  .modi button {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+  .indietro {
+    top: 12px;
+    left: auto;
+    right: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .fondo {
+    padding-inline: 14px;
+    gap: 10px;
+  }
+  .da-vicino .modi {
+    display: none;
+  }
+  .menu-voci {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 18px;
+    padding: 10px 0;
+    text-align: center;
+  }
+  /* su telefono tutte le voci devono stare nello schermo, senza finire sotto il tasto di chiusura */
+  .menu-gruppo {
+    gap: clamp(8px, 1.5vh, 16px);
+  }
+  .menu-voci b {
+    font-size: clamp(24px, 4vh, 44px);
+  }
+  .menu-voci span {
+    margin-top: 3px;
+    font-size: clamp(11px, 1.5vh, 14px);
+  }
+  .menu-gruppo + .menu-gruppo {
+    padding: 18px 0 0;
+    border-left: 0;
+    border-top: 2px solid rgba(255, 255, 255, 0.35);
+  }
+  .fondo-voce {
+    font-size: 12px;
+  }
+  .solo-largo {
+    display: none; /* su telefono resta solo «Prossimo →» */
+  }
+  .freccia {
+    width: 46px;
+    height: 46px;
+    margin-top: -23px;
+    font-size: 20px;
+  }
+  .freccia.sinistra {
+    left: 10px;
+  }
+  .freccia.destra {
+    right: 10px;
+  }
+  .punto {
+    width: 108px;
+    height: 108px;
+  }
+  .suggerimento {
+    bottom: 14px;
+  }
+  .foglio {
+    padding-top: 92px;
+  }
+  .due,
+  .storia,
+  .valori,
+  .saluto {
+    grid-template-columns: 1fr;
+  }
+  .valori {
+    gap: 40px;
+  }
+  .valori article:nth-child(2) {
+    transform: rotate(1deg);
+  }
+  .cifre {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cifre li,
+  .cifre li + li {
+    padding: 20px 12px 22px 0;
+    border-left: 0;
+  }
+  .cifre span {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punto .giro,
+  .nastro-testo,
+  .scorre > div,
+  .ascii,
+  .puntini u {
+    animation: none;
+  }
+  .motto b,
+  .titolone b {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+  .caricamento,
+  .pagina,
+  .menu {
+    transition: opacity 0.3s;
+  }
+  .caricamento.via {
+    transform: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pagina,
+  .menu {
+    transform: none;
+    opacity: 0;
+  }
+  .pagina.aperta,
+  .menu.aperto {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- contenuti per motori di ricerca, AI e lettori di schermo */
+/* La sezione «contenuti» (scritta da vite.config.js) contiene testi, numeri e link veri del sito come pagina
+   normale. A schermo non si vede, perché quelle cose le mostra la stanza; resta leggibile a chi non la "vede". */
+.contenuti {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

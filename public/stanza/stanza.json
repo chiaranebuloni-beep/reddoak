@@ -1,0 +1,210 @@
+{
+  "versione": 1795790337,
+  "bozza": false,
+  "camera": {
+    "posizione": [
+      0,
+      1.6,
+      0
+    ],
+    "yaw": 0,
+    "sguardoBordo": 1.51844
+  },
+  "panorama": {
+    "file": "panorama.jpg",
+    "leggero": "panorama-4096.jpg",
+    "larghezza": 8192,
+    "altezza": 4096,
+    "anteprima": "panorama-anteprima.jpg"
+  },
+  "modello": "stanza.glb",
+  "cielo": "#C3D4E6",
+  "cieloFoto": {
+    "file": "cielo.jpg",
+    "rotazione": 3.24631
+  },
+  "hotspot": [
+    {
+      "id": "quiz-patente",
+      "titolo": "Quiz Patente",
+      "posizione": [
+        -11.7455,
+        0.3,
+        -3.8164
+      ]
+    },
+    {
+      "id": "mypushop",
+      "titolo": "myPushop",
+      "posizione": [
+        -7.2591,
+        0.3,
+        -9.9914
+      ]
+    },
+    {
+      "id": "meraviglia",
+      "titolo": "meravigliä",
+      "posizione": [
+        0,
+        0.3,
+        -12.35
+      ]
+    },
+    {
+      "id": "relatia",
+      "titolo": "Relatia",
+      "posizione": [
+        7.2591,
+        0.3,
+        -9.9914
+      ]
+    },
+    {
+      "id": "mister-lavaggio",
+      "titolo": "Mister Lavaggio",
+      "posizione": [
+        11.7455,
+        0.3,
+        -3.8164
+      ]
+    }
+  ],
+  "schermi": [
+    {
+      "id": "quiz-patente",
+      "angoli": [
+        [
+          -15.6409,
+          1.2,
+          -2.1379
+        ],
+        [
+          -13.9104,
+          1.2,
+          -7.4638
+        ],
+        [
+          -13.9104,
+          10.16,
+          -7.4638
+        ],
+        [
+          -15.6409,
+          10.16,
+          -2.1379
+        ]
+      ]
+    },
+    {
+      "id": "mypushop",
+      "angoli": [
+        [
+          -11.3971,
+          1.2,
+          -10.9231
+        ],
+        [
+          -6.8666,
+          1.2,
+          -14.2147
+        ],
+        [
+          -6.8666,
+          10.16,
+          -14.2147
+        ],
+        [
+          -11.3971,
+          10.16,
+          -10.9231
+        ]
+      ]
+    },
+    {
+      "id": "meraviglia",
+      "angoli": [
+        [
+          -2.8,
+          1.2,
+          -15.536
+        ],
+        [
+          2.8,
+          1.2,
+          -15.536
+        ],
+        [
+          2.8,
+          10.16,
+          -15.536
+        ],
+        [
+          -2.8,
+          10.16,
+          -15.536
+        ]
+      ]
+    },
+    {
+      "id": "relatia",
+      "angoli": [
+        [
+          6.8666,
+          1.2,
+          -14.2147
+        ],
+        [
+          11.3971,
+          1.2,
+          -10.9231
+        ],
+        [
+          11.3971,
+          10.16,
+          -10.9231
+        ],
+        [
+          6.8666,
+          10.16,
+          -14.2147
+        ]
+      ]
+    },
+    {
+      "id": "mister-lavaggio",
+      "angoli": [
+        [
+          13.9104,
+          1.2,
+          -7.4638
+        ],
+        [
+          15.6409,
+          1.2,
+          -2.1379
+        ],
+        [
+          15.6409,
+          10.16,
+          -2.1379
+        ],
+        [
+          13.9104,
+          10.16,
+          -7.4638
+        ]
+      ]
+    }
+  ],
+  "momenti": {
+    "sera": {
+      "file": "panorama-sera.jpg",
+      "leggero": "panorama-sera-4096.jpg",
+      "larghezza": 8192,
+      "altezza": 4096,
+      "anteprima": "panorama-sera-anteprima.jpg"
+    }
+  },
+  "viste": {}
+}

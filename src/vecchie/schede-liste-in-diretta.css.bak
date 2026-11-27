@@ -1,0 +1,706 @@
+/* Le schede dei progetti: fondo bianco, tipografia grande, il prodotto vero in una vetrina 3D.
+   I colori del progetto (--a e --a2, messi da schede.js) sono solo accenti e un alone leggero.
+   Tutto vale solo dentro .sk. */
+.sk {
+  --molle: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --inchiostro: #121013;
+  --tenue: rgba(18, 16, 19, 0.6);
+  --filo: rgba(18, 16, 19, 0.12);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-rows: 1fr auto;
+  gap: clamp(20px, 2.6vw, 40px) clamp(28px, 4vw, 72px);
+  min-height: 100%;
+  padding: 104px clamp(22px, 5vw, 88px) clamp(20px, 2.4vw, 36px);
+  overflow: hidden;
+  background: #fff;
+  color: var(--inchiostro);
+  isolation: isolate;
+}
+/* due aloni di colore che si muovono piano dietro a tutto */
+.sk::before,
+.sk::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 52vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+  animation: sk-alone 18s ease-in-out infinite alternate;
+}
+.sk::before {
+  top: -22vw;
+  right: -14vw;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a) 24%, transparent), transparent 64%);
+}
+.sk::after {
+  bottom: -30vw;
+  left: -18vw;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a2) 16%, transparent), transparent 64%);
+  animation-delay: -9s;
+}
+@keyframes sk-alone {
+  to { transform: translate(-6vw, 5vw) scale(1.15); }
+}
+
+.sk-testo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.sk-testo > *,
+.sk-scena,
+.sk-numeri {
+  animation: sk-entra 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sk-testo > :nth-child(2) { animation-delay: 0.04s; }
+.sk-testo > :nth-child(3) { animation-delay: 0.08s; }
+.sk-testo > :nth-child(4) { animation-delay: 0.12s; }
+.sk-testo > :nth-child(5) { animation-delay: 0.16s; }
+.sk-testo > :nth-child(6) { animation-delay: 0.2s; }
+.sk-numeri { animation-delay: 0.24s; }
+@keyframes sk-entra {
+  from { opacity: 0; transform: translateY(26px); filter: blur(10px); }
+}
+.sk-tag {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 clamp(18px, 2vw, 28px);
+  /* stesso carattere del resto del sito: quello "da macchina da scrivere" all'utente non c'entrava niente */
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.sk-tag b {
+  font-weight: 700;
+  color: var(--a);
+}
+.sk-tag b::after {
+  content: "";
+  display: inline-block;
+  width: 34px;
+  height: 1px;
+  margin-left: 12px;
+  vertical-align: middle;
+  background: var(--filo);
+}
+.sk-logo img {
+  display: block;
+  height: clamp(30px, 3vw, 46px);
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+.sk-logo.con-scritta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sk-logo.con-scritta img {
+  height: clamp(40px, 3.6vw, 54px);
+  border-radius: 24%;
+}
+.sk-logo.con-scritta span {
+  font-size: clamp(18px, 1.7vw, 25px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.sk-logo.con-scritta br {
+  display: none;
+}
+.sk-logo.con-scritta b::before {
+  content: " ";
+}
+.sk-logo.con-scritta b {
+  font-weight: 600;
+  color: var(--a);
+}
+/* la frase: è lei la protagonista */
+.sk-claim {
+  margin: clamp(18px, 2.2vw, 32px) 0 0;
+  /* lo stesso carattere dei titoloni di «Chi siamo», ma in maiuscolo e più piccolo: a grandezza piena e in
+     minuscolo all'utente faceva troppo contrasto con il resto della scheda */
+  font-family: var(--titoli);
+  font-size: clamp(27px, 3.4vw, 56px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.sk-claim em {
+  font-style: normal;   /* mai il corsivo: la parte in evidenza cambia solo colore */
+  color: var(--a);
+}
+.sk-cuore {
+  display: inline-block;
+  color: var(--a);
+  animation: sk-batte 1.3s ease-in-out infinite;
+}
+@keyframes sk-batte {
+  18% { transform: scale(1.2); }
+  36% { transform: scale(1); }
+}
+.sk-desc {
+  max-width: 50ch;
+  margin: clamp(16px, 1.8vw, 26px) 0 0;
+  font-size: clamp(15.5px, 1.22vw, 18px);
+  line-height: 1.55;
+  color: rgba(18, 16, 19, 0.72);
+}
+.sk-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin: clamp(22px, 2.4vw, 34px) 0 0;
+}
+.sk-bottone {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 7px 7px 22px;
+  border-radius: 999px;
+  background: var(--inchiostro);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.35s, transform 0.35s var(--molle);
+}
+.sk-bottone span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--a);
+  transition: transform 0.35s var(--molle), background 0.35s;
+}
+.sk-bottone:hover {
+  background: var(--a);
+  transform: scale(1.03);
+}
+.sk-bottone:hover span {
+  background: #fff;
+  color: var(--a);
+  transform: rotate(45deg);
+}
+.sk-bottone.vuoto {
+  padding: 16px 4px;
+  border-radius: 0;
+  background: none;
+  color: var(--inchiostro);
+  box-shadow: inset 0 -1px 0 var(--inchiostro);
+}
+.sk-bottone.vuoto span {
+  width: auto;
+  height: auto;
+  background: none;
+  color: inherit;
+}
+
+/* i numeri: una riga pulita, separata da fili sottili */
+.sk-numeri {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--filo);
+}
+.sk-numeri li {
+  padding: clamp(14px, 1.6vw, 22px) 20px 0 0;
+}
+.sk-numeri li + li {
+  padding-left: clamp(16px, 2vw, 32px);
+  border-left: 1px solid var(--filo);
+}
+.sk-numeri p {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+.sk-numeri b {
+  /* più piccoli del titolo: prima erano più grandi e gli rubavano la scena */
+  font-family: var(--titoli);
+  font-size: clamp(24px, 2.6vw, 42px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.sk-numeri i {
+  font-style: normal;
+  font-size: clamp(13px, 1.1vw, 16px);
+  font-weight: 500;
+  color: var(--a);
+}
+.sk-numeri span {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--tenue);
+}
+/* i punti di forza al posto dei numeri (Relatia) */
+.sk-punti li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.sk-punti i {
+  font-size: 13px;
+  font-weight: 700;
+}
+.sk-punti b {
+  font-size: clamp(15px, 1.3vw, 19px);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+/* ---------------------------------------------------------------- la vetrina 3D */
+.sk-scena {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  animation-duration: 1.4s;
+  animation-delay: 0.15s;
+}
+.sc-vetrina {
+  --mx: 0;
+  --my: 0;
+  position: relative;
+  width: min(100%, 700px, 98vh);
+  aspect-ratio: 1 / 0.74;
+  perspective: 1800px;
+}
+.vt-gruppo {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(-15deg + var(--mx) * 7deg)) rotateX(calc(6deg - var(--my) * 5deg));
+}
+.vt-finestra {
+  position: absolute;
+  left: 0;
+  top: 5%;
+  width: 84%;
+  aspect-ratio: 16 / 10.6;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(18, 16, 19, 0.08),
+    0 34px 60px -30px rgba(18, 16, 19, 0.4),
+    0 70px 130px -50px color-mix(in srgb, var(--a) 70%, #000);
+}
+.vt-barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  background: #f5f5f7;
+  border-bottom: 1px solid rgba(18, 16, 19, 0.06);
+}
+.vt-barra i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d5d5da;
+}
+.vt-barra span {
+  margin: 0 auto;
+  padding: 3px 46px;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+  color: var(--tenue);
+  transform: translateX(-18px);
+}
+.vt-vista {
+  position: relative;
+  height: calc(100% - 30px);
+  overflow: hidden;
+}
+/* la pagina vera scorre piano da cima a fondo e ritorno */
+.vt-vista img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0%;
+  animation: vt-scorre 30s cubic-bezier(0.6, 0, 0.4, 1) infinite alternate;
+}
+@keyframes vt-scorre {
+  0%, 5% { object-position: 50% 0%; }
+  95%, 100% { object-position: 50% 100%; }
+}
+/* l'elemento in primo piano: un pezzo di interfaccia che racconta il progetto, sospeso davanti alla finestra */
+.vt-davanti {
+  position: absolute;
+  right: -2%;
+  bottom: -5%;
+  width: 41%;
+  font-size: clamp(9.5px, min(1.02vw, 1.6vh), 14.5px);
+  transform: translateZ(100px) translate(calc(var(--mx) * 16px), calc(var(--my) * 12px));
+}
+.vt-primo {
+  position: relative;
+  padding: 1.1em;
+  border-radius: 1.5em;
+  background: #fff;
+  line-height: 1.3;
+  box-shadow:
+    0 0 0 1px rgba(18, 16, 19, 0.06),
+    0 40px 70px -30px rgba(18, 16, 19, 0.55),
+    0 70px 110px -50px color-mix(in srgb, var(--a) 70%, #000);
+}
+.vt-primo p,
+.vt-primo ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vt-primo .pr-riga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  font-size: 0.92em;
+  color: var(--tenue);
+}
+.vt-primo .pr-riga b {
+  color: var(--inchiostro);
+}
+.vt-primo .pr-riga em {
+  padding: 0.25em 0.75em;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--a) 10%, #fff);
+  color: var(--a);
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Quiz Patente: la domanda */
+.pr-quiz .q-segnale {
+  display: block;
+  width: 42%;
+  margin: 1em auto 0.7em;
+  filter: drop-shadow(0 0.5em 0.6em rgba(18, 16, 19, 0.18));
+}
+.pr-quiz .q-testo {
+  min-height: 3.9em;
+  font-size: 1.04em;
+  font-weight: 500;
+  text-align: center;
+}
+.pr-quiz .q-segnale,
+.pr-quiz .q-testo {
+  transition: opacity 0.3s, transform 0.4s var(--molle);
+}
+.pr-quiz.cambia .q-segnale,
+.pr-quiz.cambia .q-testo {
+  opacity: 0;
+  transform: translateY(0.5em) scale(0.96);
+}
+.pr-quiz .q-risposte {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em;
+  margin-top: 0.7em;
+}
+.pr-quiz .q-risposte span {
+  padding: 0.7em 0;
+  border-radius: 0.9em;
+  background: color-mix(in srgb, var(--a) 9%, #fff);
+  color: var(--a);
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.35s, color 0.35s, transform 0.4s var(--molle);
+}
+.pr-quiz.risposta-vero .q-v,
+.pr-quiz.risposta-falso .q-f {
+  background: #1faa59;
+  color: #fff;
+  transform: scale(1.05);
+}
+.pr-quiz .q-punti {
+  display: flex;
+  gap: 0.35em;
+  margin-top: 0.9em;
+}
+.pr-quiz .q-punti i {
+  flex: 1;
+  height: 0.38em;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.1);
+  transition: background 0.4s;
+}
+.pr-quiz .q-punti i.ok {
+  background: #1faa59;
+}
+
+/* Relatia: i contatti in diretta */
+.pr-lead .ld-lista {
+  display: grid;
+  gap: 0.5em;
+  margin: 0.8em 0;
+}
+.pr-lead .ld-lista li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.55em 0.65em;
+  border-radius: 0.95em;
+  background: #f6f5f9;
+}
+.pr-lead .ld-lista li.mosso {
+  animation: ld-lampo 0.9s ease-out;
+}
+@keyframes ld-lampo {
+  0% { background: color-mix(in srgb, var(--a) 22%, #fff); transform: scale(1.03); }
+}
+.pr-lead .ld-lista i {
+  display: grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--a), var(--a2));
+  color: #fff;
+  font-style: normal;
+  font-size: 0.82em;
+  font-weight: 600;
+}
+.pr-lead .ld-lista span {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.86em;
+  color: var(--tenue);
+}
+.pr-lead .ld-lista span b {
+  font-size: 1.12em;
+  color: var(--inchiostro);
+}
+.pr-lead .ld-lista u {
+  white-space: nowrap;
+  padding: 0.28em 0.7em;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.07);
+  font-size: 0.82em;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.4s, color 0.4s;
+}
+.pr-lead li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a2) 16%, #fff);
+  color: var(--a2);
+}
+.pr-lead li[data-fase="2"] u {
+  background: var(--a);
+  color: #fff;
+}
+.pr-lead .ld-piede {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--filo);
+  color: var(--tenue);
+}
+.pr-lead .ld-piede b {
+  font-size: 1.7em;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--inchiostro);
+  font-variant-numeric: tabular-nums;
+}
+
+/* myPushop: i negozi vicini (stessa impostazione dei contatti di Relatia): offerta → salvata → in negozio */
+.pr-negozi .ld-lista i {
+  background: linear-gradient(135deg, var(--a), color-mix(in srgb, var(--a) 60%, var(--a2)));
+}
+.pr-negozi .ld-lista u {
+  background: color-mix(in srgb, var(--a) 9%, #fff);
+  color: var(--a);
+}
+.pr-negozi li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a) 22%, #fff);
+  color: var(--a);
+}
+
+/* Mister Lavaggio: i lavaggi della giornata, in arrivo → lavaggio → fatto */
+.pr-lavaggi li[data-fase="1"] u {
+  background: color-mix(in srgb, var(--a2) 18%, #fff);
+  color: var(--a);
+}
+
+/* meravigliä: le campagne in diretta (stessa impostazione dei contatti di Relatia, con una barra per canale) */
+.pr-campagne .ld-lista li {
+  row-gap: 0.5em;
+}
+.pr-campagne .ld-lista i {
+  background: var(--a2);
+}
+.pr-campagne .ld-lista u {
+  background: color-mix(in srgb, var(--a) 12%, #fff);
+  color: var(--a);
+  font-variant-numeric: tabular-nums;
+}
+.pr-campagne .ld-lista s {
+  grid-column: 1 / -1;
+  height: 0.32em;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(18, 16, 19, 0.08);
+}
+.pr-campagne .ld-lista s b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--a) 45%, #fff), var(--a));
+  transform-origin: left;
+  transition: transform 0.9s var(--molle);
+}
+
+/* i cartellini di vetro con i numeri, sospesi davanti */
+.vt-cartello {
+  position: absolute;
+  display: grid;
+  gap: 3px;
+  padding: 10px 14px 11px;
+  border-radius: 14px;
+  background: var(--inchiostro);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 22px 36px -18px rgba(18, 16, 19, 0.6);
+}
+/* quello nero sta a cavallo dell'angolo in basso a sinistra della finestra */
+.vt-cartello.basso {
+  left: 5%;
+  bottom: 13%;
+  transform: translateZ(60px) translate(calc(var(--mx) * 12px), calc(var(--my) * 9px)) rotate(-3deg);
+}
+/* quello nel colore del progetto è appoggiato sull'angolo in alto a destra dell'elemento davanti, come un adesivo */
+.vt-cartello.alto {
+  right: -18px;
+  bottom: calc(100% - 5px);
+  background: var(--a);
+  box-shadow: 0 18px 30px -14px color-mix(in srgb, var(--a) 75%, #000);
+  transform: rotate(3deg);
+}
+.vt-cartello b {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--titoli);
+  font-size: clamp(19px, 1.9vw, 28px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.vt-cartello i {
+  font-family: "Geist Variable", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.vt-cartello span {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0.82;
+}
+.vt-cartello.solo span {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- telefono e schermi bassi */
+@media (max-width: 900px), (max-height: 600px) {
+  .sk {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    padding-top: 88px;
+  }
+  .sk-scena {
+    order: -1;
+    padding: 4px 6px 10px;
+  }
+  /* la vetrina su telefono: più alta, meno girata, con l'elemento davanti largo abbastanza da leggersi e i
+     cartellini che restano dentro lo schermo */
+  .sc-vetrina {
+    width: min(100%, 460px);
+    aspect-ratio: 1 / 0.88;
+    perspective: 1400px;
+  }
+  .vt-gruppo {
+    transform: rotateY(calc(-9deg + var(--mx) * 4deg)) rotateX(calc(4deg - var(--my) * 3deg));
+  }
+  .vt-finestra {
+    top: 4%;
+    width: 80%;
+  }
+  .vt-davanti {
+    right: 0;
+    bottom: 0;
+    width: 60%;
+    font-size: clamp(9.5px, 2.7vw, 13px);
+    transform: translateZ(40px) translate(calc(var(--mx) * 8px), calc(var(--my) * 6px));
+  }
+  .vt-primo {
+    padding: 1em;
+  }
+  .vt-cartello {
+    padding: 7px 10px 8px;
+    border-radius: 11px;
+  }
+  .vt-cartello.alto {
+    right: -4px;
+    bottom: calc(100% - 5px);
+  }
+  .vt-cartello.basso {
+    left: 2%;
+    bottom: 5%;
+    /* più indietro dell'elemento davanti: dove si toccano, il cartellino gli passa dietro */
+    transform: translateZ(20px) translate(calc(var(--mx) * 10px), calc(var(--my) * 7px)) rotate(-3deg);
+  }
+  .vt-cartello b {
+    font-size: 18px;
+  }
+  .sk-numeri {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+  }
+  .sk-numeri li,
+  .sk-numeri li + li {
+    padding: 14px 10px 14px 0;
+    border-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk *,
+  .sk::before,
+  .sk::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

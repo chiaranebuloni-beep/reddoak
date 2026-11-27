@@ -1,0 +1,17 @@
+node_modules
+dist
+.DS_Store
+.vercel
+
+# Blender: file troppo grandi per GitHub (limite 100 MB a file) o che si possono rifare
+*.blend1
+# la stanza (174 MB): si ricrea con `npm run stanza:crea`. ATTENZIONE: le modifiche fatte a mano in Blender
+# NON sono salvate su GitHub, tenerne una copia a parte
+blender/stanza.blend
+# cielo, materiali e arredi di Poly Haven (256 MB): si riscaricano con `python3 blender/scarica_risorse.py`
+blender/risorse/
+blender/textures/_*.png
+
+# il modello 3D della stanza (70 MB) e il suo cielo: servivano al vecchio «3D dal vivo», il sito non li usa più
+public/stanza/stanza.glb
+public/stanza/cielo.jpg

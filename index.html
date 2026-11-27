@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FB0020" />
+    <!-- Titolo, descrizione, immagine di condivisione e dati per motori di ricerca e AI li scrive vite.config.js al
+         posto del segnaposto qui sotto, diversi per ogni pagina (hall, progetti, chi siamo). -->
+    <title>Reddoak · Il quartier generale delle nostre app e dei nostri progetti digitali</title>
+    <!-- testa -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" as="image" href="/brand/ghianda-giro.webp" crossorigin />
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/src/schede.css" />
+  </head>
+  <body>
+    <!-- Schermata di caricamento: resta finché la stanza non è pronta, poi scorre via verso l'alto -->
+    <div class="caricamento" id="caricamento" role="status" aria-label="Sto caricando la stanza">
+      <p class="motto" aria-hidden="true">
+        <span><b>Diamo vita</b></span>
+        <span><b>alle tue idee<i class="puntini"><u></u><u></u></i></b></span>
+      </p>
+      <div class="ghianda" aria-hidden="true"><pre class="ascii" id="ascii"></pre></div>
+    </div>
+    <script type="module">
+      // La ghianda che ruota, in ASCII art: ogni fotogramma del filmato (una griglia 10 × 6 di immagini)
+      // viene letto a bassa risoluzione e ogni puntino diventa un carattere, più fitto dove è più chiaro.
+      const tela = document.getElementById("ascii");
+      const COLONNE = 46, RIGHE = 27, FOTOGRAMMI = 60, LATO = 400;
+      const SCALA = " .:;~+=xo*#%@@"; // dal vuoto al pieno
+      const foglio = new Image();
+      foglio.crossOrigin = "anonymous";
+      foglio.src = "/brand/ghianda-giro.webp";
+      foglio.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = COLONNE;
+        c.height = RIGHE;
+        const x = c.getContext("2d", { willReadFrequently: true });
+        const disegna = (ora) => {
+          if (!tela.isConnected) return; // la schermata di caricamento è andata via
+          const n = Math.floor(ora / 50) % FOTOGRAMMI; // 20 fotogrammi al secondo: un giro in 3 secondi
+          x.clearRect(0, 0, COLONNE, RIGHE);
+          x.drawImage(foglio, (n % 10) * LATO, Math.floor(n / 10) * LATO, LATO, LATO, 0, 0, COLONNE, RIGHE);
+          const px = x.getImageData(0, 0, COLONNE, RIGHE).data;
+          let testo = "";
+          for (let r = 0; r < RIGHE; r++) {
+            for (let k = 0; k < COLONNE; k++) {
+              const i = (r * COLONNE + k) * 4;
+              const pieno = (px[i + 3] / 255) * ((0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255);
+              testo += px[i + 3] < 40 ? " " : SCALA[Math.max(1, Math.min(SCALA.length - 1, Math.round(pieno * (SCALA.length - 1))))];
+            }
+            testo += "\n";
+          }
+          tela.textContent = testo;
+          requestAnimationFrame(disegna);
+        };
+        requestAnimationFrame(disegna);
+      };
+    </script>
+
+    <!-- Impostazione come engine.land: la stanza vive in un riquadro, con una cornice rossa attorno -->
+    <div class="nastro" aria-hidden="true">
+      <div class="nastro-testo">
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+        <span>Benvenuti nel quartier generale Reddoak</span>
+      </div>
+    </div>
+
+    <main class="riquadro" id="riquadro">
+      <canvas id="scena" aria-label="La hall Reddoak: trascina per guardarti intorno"></canvas>
+
+      <div id="punti" aria-hidden="false"></div>
+
+      <a class="logo" href="/" aria-label="Reddoak: torna nella stanza"><img src="/brand/reddoak-logo.svg" alt="Reddoak" /></a>
+
+      <p class="suggerimento" id="suggerimento">Trascina per guardarti intorno</p>
+      <!-- le due frecce fanno capire che ai lati ci sono altri progetti: girano lo sguardo di uno alla volta -->
+      <button class="freccia sinistra" id="va-sinistra" type="button" aria-label="Guarda i progetti a sinistra"><span aria-hidden="true">←</span></button>
+      <button class="freccia destra" id="va-destra" type="button" aria-label="Guarda i progetti a destra"><span aria-hidden="true">→</span></button>
+
+      <!-- le pagine (progetti, chi siamo) si aprono qui dentro, sopra la stanza -->
+      <section class="pagina" id="pagina" hidden></section>
+      <a class="indietro" id="indietro" href="/" hidden>← Torna nella hall</a>
+
+      <div class="avviso" id="avviso">Carico la stanza…</div>
+      <!-- I contenuti veri del sito scritti come pagina normale, per motori di ricerca, AI e lettori di schermo
+           (a schermo non si vedono: li mostra la stanza). Li scrive vite.config.js partendo dai testi del sito. -->
+      <!-- contenuti -->
+    </main>
+
+    <footer class="fondo">
+      <a class="fondo-voce" id="fondo-progetto" href="/"></a>
+      <button type="button" class="righe" id="apri-menu" aria-label="Apri il menu" aria-expanded="false">
+        <i></i><i></i><i></i>
+      </button>
+      <a class="fondo-voce destra" href="/chi-siamo/">Chi siamo</a>
+    </footer>
+
+    <!-- menu a tutto schermo, si apre dalle tre righe -->
+    <div class="menu" id="menu" hidden>
+      <a class="menu-logo" href="/"><img src="/brand/reddoak-logo.svg" alt="Reddoak" /></a>
+      <nav class="menu-voci" id="menu-voci" aria-label="Menu"></nav>
+      <button type="button" class="menu-chiudi" id="chiudi-menu" aria-label="Chiudi il menu"><i></i><i></i></button>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
