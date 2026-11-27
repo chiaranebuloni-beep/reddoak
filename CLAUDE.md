@@ -178,6 +178,13 @@ la mappa del sito e il riassunto per le AI si aggiornano da soli.
 
 ## Online (dal 27/11/2026, su richiesta dell'utente: «per adesso mettilo su Vercel e su GitHub»)
 
+**PUBBLICARE SEMPRE, senza chiedere**: il 27/11/2026 l'utente ha risposto «Sì, sempre» alla domanda «D'ora in poi
+pubblico da solo ogni modifica, online e su GitHub?». Dopo ogni modifica al sito, una volta controllata: salvare
+nell'archivio (`git commit`), `npm run pubblica` e `git push`, poi riaprire il sito online per verificare. L'utente
+guarda il risultato dal telefono sul sito online, non in locale. Vale per le modifiche al sito; collegare il
+dominio reddoak.com, cambiare la visibilità del progetto su GitHub o altre operazioni sugli account restano da
+chiedere.
+
 - **Vercel**: progetto `reddoak3` nella squadra «meraviglia's projects», indirizzo provvisorio
   https://reddoak3.vercel.app . Si ripubblica con `npm run pubblica` (carica i file da questo Mac; `.vercelignore`
   lascia fuori Blender e le versioni vecchie). Impostazioni in `vercel.json` (indirizzi con la barra finale, foto e
@@ -188,7 +195,7 @@ la mappa del sito e il riassunto per le AI si aggiornano da soli.
   Vercel e si ripubblica, si apre da solo.
 - **GitHub**: https://github.com/chiaranebuloni-beep/reddoak (creato dall'utente; ramo `main`, identità copiata
   dal progetto domunica). NON è collegato a Vercel: caricare su GitHub non ripubblica il sito, e viceversa. Si
-  carica con `git push` solo quando l'utente lo chiede. Restano FUORI da GitHub,
+  carica con `git push` a ogni modifica. Restano FUORI da GitHub,
   perché troppo grandi: `blender/stanza.blend` (174 MB, si ricrea con `npm run stanza:crea` ma le modifiche fatte
   a mano in Blender NON sarebbero salvate: tenerne una copia), `blender/risorse/` (si riscarica) e
   `public/stanza/stanza.glb`.
@@ -198,7 +205,7 @@ la mappa del sito e il riassunto per le AI si aggiornano da soli.
 
 Vite + three.js senza framework: `index.html`, `src/main.js`, `src/style.css`,
 `src/progetti.js` (testi presi dal sito Reddoak 2). Solo italiano, font Geist.
-È online su Vercel (vedi «Online»): pubblicare solo quando l'utente lo chiede.
+È online su Vercel (vedi «Online»): ogni modifica va pubblicata subito, l'utente l'ha chiesto.
 
 Impostazione della pagina come engine.land (richieste dell'utente il 27/11/2026:
 «mi piace molto il fatto che il video stia solo nel riquadro», bollini «GO!»,
