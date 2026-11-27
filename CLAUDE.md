@@ -186,7 +186,9 @@ la mappa del sito e il riassunto per le AI si aggiornano da soli.
   sta sull'indirizzo provvisorio dice ai motori di ricerca di non contarlo (`PROVVISORIO` in `vite.config.js`:
   «noindex» e robots.txt chiuso), per non creare un doppione. Quando reddoak.com viene collegato al progetto
   Vercel e si ripubblica, si apre da solo.
-- **GitHub**: l'archivio git c'è (ramo `main`, identità copiata dal progetto domunica). Restano FUORI da GitHub,
+- **GitHub**: https://github.com/chiaranebuloni-beep/reddoak (creato dall'utente; ramo `main`, identità copiata
+  dal progetto domunica). NON è collegato a Vercel: caricare su GitHub non ripubblica il sito, e viceversa. Si
+  carica con `git push` solo quando l'utente lo chiede. Restano FUORI da GitHub,
   perché troppo grandi: `blender/stanza.blend` (174 MB, si ricrea con `npm run stanza:crea` ma le modifiche fatte
   a mano in Blender NON sarebbero salvate: tenerne una copia), `blender/risorse/` (si riscarica) e
   `public/stanza/stanza.glb`.
