@@ -88,6 +88,7 @@ File sorgente: `blender/stanza.blend` (Blender 5.3, in /Applications).
 | `npm run stanza:punti` | aggiorna solo hotspot, camere e modello 3D, senza rifare le foto (pochi secondi) |
 | `npm run stanza:sera` | rifà solo la foto serale della stanza (circa 25 minuti) |
 | `npm run ghianda` | rifà la ghianda che ruota nella schermata di caricamento |
+| `npm run pubblica` | pubblica il sito su Vercel (https://reddoak3.vercel.app) così com'è su questo Mac |
 | `npm run anteprima` | costruisce il sito come andrà online (cartella `dist/`, circa 19 MB) e lo apre su http://localhost:3131 |
 | `node blender/anteprime_foto.mjs` | rifà le anteprime leggere delle foto e l'immagine di condivisione `public/og.jpg` (lo lanciano già da soli i comandi `stanza:esporta`, `stanza:sera`, `stanza:bozza`) |
 | `npm run stanza:crea` | RICREA stanza.blend da zero: cancella le modifiche fatte a mano |
@@ -175,15 +176,27 @@ condivisione (`public/progetti/og-<id>.jpg`, fatta da `ritaglia_pezzi.mjs`), con
 (`#/progetto/<id>`) portano da soli a quelli nuovi. Aggiungendo un progetto in `src/progetti.js` la sua pagina,
 la mappa del sito e il riassunto per le AI si aggiornano da soli.
 
-DA FARE prima di andare online: confermare l'indirizzo del sito (`SITO` in `vite.config.js`, ora
-`https://reddoak.com`) e i testi di «Chi siamo» (provvisori). Chi ospita il sito deve servire le cartelle di
-`dist/` così come sono (lo fa qualunque servizio per siti statici).
+## Online (dal 27/11/2026, su richiesta dell'utente: «per adesso mettilo su Vercel e su GitHub»)
+
+- **Vercel**: progetto `reddoak3` nella squadra «meraviglia's projects», indirizzo provvisorio
+  https://reddoak3.vercel.app . Si ripubblica con `npm run pubblica` (carica i file da questo Mac; `.vercelignore`
+  lascia fuori Blender e le versioni vecchie). Impostazioni in `vercel.json` (indirizzi con la barra finale, foto e
+  programma tenuti in memoria dal browser).
+- **Indirizzo definitivo**: `https://reddoak.com`, confermato dall'utente, NON ancora collegato. Finché il sito
+  sta sull'indirizzo provvisorio dice ai motori di ricerca di non contarlo (`PROVVISORIO` in `vite.config.js`:
+  «noindex» e robots.txt chiuso), per non creare un doppione. Quando reddoak.com viene collegato al progetto
+  Vercel e si ripubblica, si apre da solo.
+- **GitHub**: l'archivio git c'è (ramo `main`, identità copiata dal progetto domunica). Restano FUORI da GitHub,
+  perché troppo grandi: `blender/stanza.blend` (174 MB, si ricrea con `npm run stanza:crea` ma le modifiche fatte
+  a mano in Blender NON sarebbero salvate: tenerne una copia), `blender/risorse/` (si riscarica) e
+  `public/stanza/stanza.glb`.
+- Testi di «Chi siamo» ancora provvisori: l'utente deve mandare quelli definitivi.
 
 ## Sito
 
 Vite + three.js senza framework: `index.html`, `src/main.js`, `src/style.css`,
 `src/progetti.js` (testi presi dal sito Reddoak 2). Solo italiano, font Geist.
-Solo in locale, niente pubblicazione.
+È online su Vercel (vedi «Online»): pubblicare solo quando l'utente lo chiede.
 
 Impostazione della pagina come engine.land (richieste dell'utente il 27/11/2026:
 «mi piace molto il fatto che il video stia solo nel riquadro», bollini «GO!»,

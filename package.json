@@ -13,7 +13,8 @@
     "stanza:bozza": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/stanza.blend --python blender/esporta_stanza.py -- --bozza && node blender/anteprime_foto.mjs",
     "ghianda": "/Applications/Blender.app/Contents/MacOS/Blender --background --python blender/crea_ghianda.py && node -e \"require('sharp')('public/brand/ghianda-giro.png',{limitInputPixels:false}).webp({quality:86,alphaQuality:90}).toFile('public/brand/ghianda-giro.webp').then(()=>require('fs').unlinkSync('public/brand/ghianda-giro.png'))\"",
     "stanza:sera": "/Applications/Blender.app/Contents/MacOS/Blender --background blender/stanza.blend --python blender/esporta_stanza.py -- --vista sera && node blender/anteprime_foto.mjs",
-    "anteprima": "vite build && vite preview --port 3131"
+    "anteprima": "vite build && vite preview --port 3131",
+    "pubblica": "npx vercel deploy --prod --yes"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
