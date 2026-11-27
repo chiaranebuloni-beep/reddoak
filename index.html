@@ -80,7 +80,21 @@
 
       <a class="logo" href="/" aria-label="Reddoak: torna nella stanza"><img src="/brand/reddoak-logo.svg" alt="Reddoak" /></a>
 
-      <p class="suggerimento" id="suggerimento">Trascina per guardarti intorno</p>
+      <!-- Il cartellino che spiega come muoversi (impostazione presa da engine.land, disegno e colori nostri):
+           sparisce al primo trascinamento, con le frecce o con la X -->
+      <div class="suggerimento" id="suggerimento" role="note">
+        <div class="sg-foglio">
+          <span class="sg-icona" aria-hidden="true">
+            <svg viewBox="0 0 64 64">
+              <path d="M24 21h22" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.1 6.5" />
+              <path d="M44 14.5 51 21l-7 6.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <path class="sg-mano" d="M19 33V20.5a3.2 3.2 0 0 1 6.4 0V31l8.6 1.6a4.4 4.4 0 0 1 3.5 5L36 46.5a6.5 6.5 0 0 1-6.4 5.5h-6.2a6.5 6.5 0 0 1-5.4-2.9l-5.3-8a2.8 2.8 0 0 1 4.2-3.6z" fill="#fff" stroke="#14110f" stroke-width="2.4" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="sg-testo"><small>Come iniziare?</small><b>Trascina per scoprire</b></span>
+        </div>
+        <button class="sg-chiudi" id="chiudi-suggerimento" type="button" aria-label="Chiudi il suggerimento"><span aria-hidden="true">×</span></button>
+      </div>
       <!-- le due frecce fanno capire che ai lati ci sono altri progetti: girano lo sguardo di uno alla volta -->
       <button class="freccia sinistra" id="va-sinistra" type="button" aria-label="Guarda i progetti a sinistra"><span aria-hidden="true">←</span></button>
       <button class="freccia destra" id="va-destra" type="button" aria-label="Guarda i progetti a destra"><span aria-hidden="true">→</span></button>

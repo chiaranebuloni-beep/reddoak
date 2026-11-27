@@ -280,6 +280,11 @@ barra con le tre righe e menu a tutto schermo, schermata di caricamento):
   foto a 360°.
 - MAI testi in corsivo (richiesta dell'utente): le parti in evidenza cambiano
   solo colore. `em` e `i` sono senza corsivo in tutto il sito.
+- Cartellino «Trascina per scoprire» in basso nella hall (`#suggerimento`),
+  chiesto dall'utente su un esempio di engine.land: foglietto bianco un po'
+  storto con l'angolo piegato, mano che mostra il gesto, scritta «Come
+  iniziare?», X per chiuderlo. Sparisce al primo trascinamento o con le frecce.
+  Impostazione presa da Engine, disegno, colori e carattere nostri.
 - Frecce ai lati della hall (richiesta dell'utente: far capire che oltre ai tre
   progetti che si vedono ce ne sono altri): girano lo sguardo di un progetto
   alla volta (`gira()` in `src/main.js`) e spariscono quando da quel lato si è

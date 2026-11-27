@@ -495,6 +495,7 @@ function vaiA(i) {
 }
 
 // Le frecce ai lati della hall: girano lo sguardo verso il progetto accanto (oltre l'ultimo si arriva a fine corsa).
+$("chiudi-suggerimento").addEventListener("click", () => $("suggerimento").classList.add("via"));
 const frecciaSinistra = $("va-sinistra");
 const frecciaDestra = $("va-destra");
 function gira(verso) {
