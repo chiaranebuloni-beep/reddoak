@@ -33,18 +33,28 @@ camera.rotation.order = "YXZ";
 // ------------------------------------------------------------------ sguardo
 const PITCH_MIN = -0.62;
 const PITCH_MAX = 0.85; // si può alzare lo sguardo fino al lucernario
-const PITCH_VISTA = 0.13; // sguardo un po' verso l'alto: si vedono gli schermi interi e il logo Reddoak
+// Quanto è larga la vista e quanto si guarda in su dipendono dalla forma del riquadro (li sceglie ridimensiona()).
+// Su telefono (riquadro alto e stretto) una vista larga mostrava soprattutto pavimento e soffitto, con gli schermi
+// piccoli in mezzo: lì si stringe la vista (uno zoom) e si alza lo sguardo, così lo schermo riempie il telefono.
+const INQUADRATURE = [
+  { finoA: 0.8, fov: 56, pitch: 0.24 }, // telefono in verticale
+  { finoA: 1.25, fov: 66, pitch: 0.18 }, // finestra quasi quadrata, tablet
+  { finoA: Infinity, fov: 70, pitch: 0.13 }, // computer: ampia, fa sentire lo spazio grande
+];
+let pitchVista = 0.13; // lo sguardo "di riposo": un po' verso l'alto, per vedere gli schermi interi e il logo Reddoak
 const PITCH_VICINO = 0.2; // davanti a uno stand: un po' verso l'alto, per vederlo tutto
-const vista = { yaw: 0, pitch: PITCH_VISTA, yawArrivo: 0, pitchArrivo: PITCH_VISTA, fov: 68, fovArrivo: 68, fovBase: 68 };
+const vista = { yaw: 0, pitch: pitchVista, yawArrivo: 0, pitchArrivo: pitchVista, fov: 68, fovArrivo: 68, fovBase: 68 };
 
 function ridimensiona() {
   const w = Math.max(1, riquadro.clientWidth);
   const h = Math.max(1, riquadro.clientHeight);
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  const base = camera.aspect < 0.8 ? 88 : camera.aspect < 1.25 ? 78 : 70; // ampio: fa sentire lo spazio grande
-  vista.fovArrivo += base - vista.fovBase;
-  vista.fovBase = base;
+  const scelta = INQUADRATURE.find((q) => camera.aspect < q.finoA);
+  vista.fovArrivo += scelta.fov - vista.fovBase;
+  vista.fovBase = scelta.fov;
+  vista.pitchArrivo += scelta.pitch - pitchVista;
+  pitchVista = scelta.pitch;
   camera.updateProjectionMatrix();
   daDisegnare = true;
 }
@@ -448,7 +458,7 @@ async function vaiAllaVista(id, subito = false) {
   sfera.position.copy(camera.position);
   sfera.rotation.y = -Math.PI / 2 + v.camera.yaw;
   vista.yaw = vista.yawArrivo = v.camera.yaw;
-  vista.pitch = vista.pitchArrivo = nuova ? PITCH_VICINO : PITCH_VISTA;
+  vista.pitch = vista.pitchArrivo = nuova ? PITCH_VICINO : pitchVista;
   vista.fov = vista.fovBase + 10;
   vista.fovArrivo = vista.fovBase;
   camera.fov = vista.fov;
@@ -472,7 +482,7 @@ function vaiA(i) {
   if (!p) return;
   // con la vista frontale si va dritti al progetto, senza fare il giro da dietro
   vista.yawArrivo = dati.camera.sguardoBordo ? dati.camera.yaw + differenza(p.yaw, dati.camera.yaw) : vista.yaw + differenza(p.yaw, vista.yaw);
-  vista.pitchArrivo = PITCH_VISTA;
+  vista.pitchArrivo = pitchVista;
   vista.fovArrivo = vista.fovBase;
   $("suggerimento").classList.add("via");
 }

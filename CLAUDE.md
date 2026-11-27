@@ -281,6 +281,11 @@ barra con le tre righe e menu a tutto schermo, schermata di caricamento):
   progetti che si vedono ce ne sono altri): girano lo sguardo di un progetto
   alla volta (`gira()` in `src/main.js`) e spariscono quando da quel lato si è
   arrivati in fondo.
+- Inquadratura della hall secondo la forma del riquadro (`INQUADRATURE` in
+  `src/main.js`). Su telefono in verticale la vista è stretta (uno zoom) e
+  guarda più in su: uno schermo riempie il telefono e si passa agli altri con
+  le frecce o trascinando. Richiesta dell'utente: «preferirei uno zoom,
+  piuttosto che vedere in primo piano il pavimento». Sul computer resta ampia.
 - POCO MOVIMENTO nella hall (richiesta dell'utente: «mi fa mal la testa se vedo
   le cosine girare e le bande sopra ai LED»). Sugli schermi LED il sito
   ridisegna, FERMI, il logo e le due bande diagonali con nome e categoria
