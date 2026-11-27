@@ -160,12 +160,6 @@
   color: inherit;
 }
 
-/* la pagina vera scorre piano da cima a fondo e ritorno */
-@keyframes vt-scorre {
-  0%, 5% { object-position: 50% 0%; }
-  95%, 100% { object-position: 50% 100%; }
-}
-
 /* ---------------------------------------------------------------- l'elemento animato davanti al sito */
 /* un pezzo di interfaccia che racconta il progetto: il quiz vero/falso, le liste «in diretta» */
 .vt-primo {
@@ -409,6 +403,12 @@
 .bq .sk-tag {
   margin: 0;
 }
+/* Il logo del progetto c'è due volte: sul riquadro del sito (.bq-logo, schermi larghi) e qui al centro, tra
+   etichetta e titolo (.bq-marchio). Su telefono si vede solo questo: l'utente lo vuole «al centro», non sopra il
+   riquadro dove scorrono sito e animazioni. */
+.bq-marchio {
+  display: none;
+}
 .bq-claim {
   max-width: 20ch;
   margin: 0;
@@ -466,8 +466,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 0%;
-  animation: vt-scorre 40s cubic-bezier(0.6, 0, 0.4, 1) infinite alternate;
+  object-position: 50% 0%; /* la cima del sito vero, FERMA: il sito che scorreva da solo all'utente non piace più */
 }
 .bq-logo {
   position: absolute;
@@ -660,6 +659,25 @@
   .bq-sito {
     grid-row: auto;
     height: 440px;
+  }
+  .bq-logo {
+    display: none;
+  }
+  .bq-marchio {
+    display: block;
+    margin: 4px 0 2px;
+  }
+  .bq-marchio .sk-logo img {
+    height: 36px;
+    margin-inline: auto;
+    object-position: center;
+  }
+  .bq-marchio .sk-logo.con-scritta {
+    justify-content: center;
+  }
+  .bq-marchio .sk-logo.con-scritta img {
+    height: 44px;
+    margin-inline: 0;
   }
   .bq-grigio {
     grid-column: auto;

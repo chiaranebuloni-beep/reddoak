@@ -33,13 +33,17 @@ camera.rotation.order = "YXZ";
 // ------------------------------------------------------------------ sguardo
 const PITCH_MIN = -0.62;
 const PITCH_MAX = 0.85; // si può alzare lo sguardo fino al lucernario
-// Quanto è larga la vista e quanto si guarda in su dipendono dalla forma del riquadro (li sceglie ridimensiona()).
-// Su telefono (riquadro alto e stretto) una vista larga mostrava soprattutto pavimento e soffitto, con gli schermi
-// piccoli in mezzo: lì si stringe la vista (uno zoom) e si alza lo sguardo, così lo schermo riempie il telefono.
+// Quanto è larga la vista e dove guarda dipendono dalla forma del riquadro (li sceglie ridimensiona()).
+// Su telefono (riquadro alto e stretto) e nelle finestre quasi quadrate lo sguardo resta DRITTO, in piano, e per
+// far entrare gli schermi alti nove metri si sposta l'inquadratura verso l'alto ("sposta": quanta parte
+// dell'altezza), come fa l'obiettivo decentrabile dei fotografi di architettura. Così le linee verticali restano
+// verticali e gli schermi si vedono di fronte. Alzando lo sguardo (pitch) sembravano «ripresi dal basso verso
+// l'alto», e all'utente non piaceva; non gli piaceva nemmeno la vista larga con il pavimento in primo piano, né
+// lo zoom stretto su un solo schermo («troppo vicino»).
 const INQUADRATURE = [
-  { finoA: 0.8, fov: 56, pitch: 0.24 }, // telefono in verticale
-  { finoA: 1.25, fov: 66, pitch: 0.18 }, // finestra quasi quadrata, tablet
-  { finoA: Infinity, fov: 70, pitch: 0.13 }, // computer: ampia, fa sentire lo spazio grande
+  { finoA: 0.8, fov: 66, pitch: 0, sposta: 0.26 }, // telefono in verticale
+  { finoA: 1.25, fov: 66, pitch: 0, sposta: 0.27 }, // finestra quasi quadrata, tablet
+  { finoA: Infinity, fov: 70, pitch: 0.13, sposta: 0 }, // computer: ampia, fa sentire lo spazio grande (approvata così)
 ];
 let pitchVista = 0.13; // lo sguardo "di riposo": un po' verso l'alto, per vedere gli schermi interi e il logo Reddoak
 const PITCH_VICINO = 0.2; // davanti a uno stand: un po' verso l'alto, per vederlo tutto
@@ -55,6 +59,9 @@ function ridimensiona() {
   vista.fovBase = scelta.fov;
   vista.pitchArrivo += scelta.pitch - pitchVista;
   pitchVista = scelta.pitch;
+  // l'inquadratura spostata verso l'alto, tenendo lo sguardo in piano
+  if (scelta.sposta) camera.setViewOffset(w, h, 0, -scelta.sposta * h, w, h);
+  else camera.clearViewOffset();
   camera.updateProjectionMatrix();
   daDisegnare = true;
 }

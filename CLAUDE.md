@@ -225,8 +225,9 @@ barra con le tre righe e menu a tutto schermo, schermata di caricamento):
   27/11 su un suo esempio («preferisco questa versione nuova»): etichetta e
   titolo sottile in minuscolo al centro, sotto una griglia di tessere con gli
   angoli tondi:
-  1. a sinistra, alta quanto la griglia, il SITO VERO che scorre da solo
-     (`pagina-<id>.webp`), con il logo in alto e davanti un pezzo di interfaccia
+  1. a sinistra, alta quanto la griglia, la cima del SITO VERO, FERMA
+     (`pagina-<id>.webp`: il sito che scorreva da solo «non mi piace più»),
+     con il logo in alto e davanti un pezzo di interfaccia
      animato (`PRIMO_PIANO` e `VIVI`: il quiz vero/falso per Quiz Patente, le
      liste «in diretta» per gli altri, in `LISTE`/`CAMPAGNE`);
   2. grigia, «Il progetto»: il TESTO COMPLETO (`desc`) e i pulsanti. Alta solo
@@ -237,7 +238,9 @@ barra con le tre righe e menu a tutto schermo, schermata di caricamento):
   (`numero()` e classe `.partiti`): l'utente li vuole in movimento, «che
   sembrino importanti».
   L'utente guarda l'anteprima a 620 punti di larghezza: anche lì deve stare
-  tutto in una schermata. Su telefono le tessere vanno una sotto l'altra.
+  tutto in una schermata. Su telefono le tessere vanno una sotto l'altra e il
+  logo del progetto sta al centro, tra etichetta e titolo (`.bq-marchio`), non
+  sul riquadro del sito: richiesta dell'utente.
   Non togliere contenuti dalle schede senza chiederglielo: quando ho accorciato
   i testi a una frase li ha rivoluti («cancellavi informazioni che servivano»).
   Per meravigliä il primo numero è «12 mila attività seguite».
@@ -282,10 +285,14 @@ barra con le tre righe e menu a tutto schermo, schermata di caricamento):
   alla volta (`gira()` in `src/main.js`) e spariscono quando da quel lato si è
   arrivati in fondo.
 - Inquadratura della hall secondo la forma del riquadro (`INQUADRATURE` in
-  `src/main.js`). Su telefono in verticale la vista è stretta (uno zoom) e
-  guarda più in su: uno schermo riempie il telefono e si passa agli altri con
-  le frecce o trascinando. Richiesta dell'utente: «preferirei uno zoom,
-  piuttosto che vedere in primo piano il pavimento». Sul computer resta ampia.
+  `src/main.js`). Su telefono e nelle finestre quasi quadrate lo sguardo resta
+  DRITTO, in piano, e l'inquadratura è spostata verso l'alto (`sposta`, come
+  l'obiettivo decentrabile dei fotografi di architettura): gli schermi si
+  vedono di fronte, con le verticali dritte, uno al centro e un po' degli
+  altri ai lati. Storia delle richieste dell'utente su telefono: prima «troppo
+  pavimento in primo piano» (vista larga), poi «troppo vicino» e «come ripreso
+  dal basso verso l'alto: voglio una visuale dritta, frontale» (zoom con lo
+  sguardo alzato). Sul computer resta com'era, ampia, approvata.
 - POCO MOVIMENTO nella hall (richiesta dell'utente: «mi fa mal la testa se vedo
   le cosine girare e le bande sopra ai LED»). Sugli schermi LED il sito
   ridisegna, FERMI, il logo e le due bande diagonali con nome e categoria

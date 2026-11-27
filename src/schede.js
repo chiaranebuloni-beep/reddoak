@@ -150,12 +150,13 @@ function riquadri(id, s, x) {
   return `
         <header class="bq-testa">
           <p class="sk-tag"><b>${x.posto}</b>${pulito(s.tag)}</p>
+          <div class="bq-marchio">${x.logo}</div>
           <h1 class="bq-claim">${x.claim}</h1>
         </header>
         <div class="bq-griglia">
           <section class="bq-t bq-sito">
             <img class="bq-pagina" src="/progetti/pagina-${id}.webp" alt="" />
-            <div class="bq-logo">${x.logo}</div>
+            <div class="bq-logo" aria-hidden="true">${x.logo}</div>
             <div class="bq-davanti" aria-hidden="true">${PRIMO_PIANO[id]?.() ?? ""}</div>
           </section>
           <section class="bq-t bq-grigio">
